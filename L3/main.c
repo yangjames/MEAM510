@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 /* section of code you want to run */
-#define L3_2_2_2
+#define L3_2_3_1
 
 ISR(TIMER1_COMPA_vect) {
   PORTB ^= 1 << 6;
@@ -124,6 +124,37 @@ int main(void) {
 
   /* main loop */
   while(1);
+
+#endif
+
+#ifdef L3_2_3_1
+  /* clear interrupts */
+  cli();
+
+  /* set direction of pin 6 on port B and turn off */
+  DDRB |= 1 << 6;
+  PORTB |= 1 << 6;
+
+  /* configure ADC */
+  ADMUX |= (1 << REFS0); // set reference voltage to VCC 5V
+  ADCSRA |= (1 << ADEN); // enable ADC
+
+  /* enable interrupts */
+  sei();
+
+  while(1) {
+    /* start conversion */
+    ADCSRA |= (1 << ADSC);
+
+    /* wait until conversion is finished */
+    while (ADCSRA & (1 << ADSC));
+
+    /* check ADC value for turning on/off the LED */
+    if (ADCW < 512)
+      PORTB |= (1 << 6);
+    else
+      PORTB &= ~(1 << 6);
+  }
 
 #endif
 
