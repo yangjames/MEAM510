@@ -9,6 +9,14 @@ ISR(TIMER1_OVF_vect) {
   tim1_ovf++;
 }
 
+ISR(TIMER0_COMPA_vect) {
+  PORTB &= ~(1 << 4);
+}
+
+ISR(TIMER0_OVF_vect) {
+  PORTB |= (1 << 4);
+}
+
 int main(void) {
   /* set debugging LED output registers */
   DDRB = 0xFF;
@@ -32,6 +40,13 @@ int main(void) {
   TCNT1 = 0x00; // intial timer value = 0
   TIMSK1 = 0x01; // enable overflow interrupt
   TCCR1B = 0x01; // enable timer
+
+  /* configure timer 0 */
+  TCCR0A = 0x00; // set normal output compare operation
+  TIMSK0 = 0x03; // enable output compare A and overflow interrupts
+  OCR0A = 128; // set output compare A value
+  TCNT0 = 0x00; // reset timer
+  TCCR0B = 0x01; // enable timer 0
 
   /* enable global interrupts */
   sei();
