@@ -1,10 +1,6 @@
 #include "m_general.h"
-#include "m_usb.h"
-#include "m_usb.c"
 #include <stdint.h>
 #include <stdlib.h>
-//#include <stdarg.h>
-//#include <stdio.h>
 
 #define PI 3.14159265359
 
