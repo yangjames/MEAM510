@@ -1,5 +1,6 @@
 #include "m_general.h"
-#include <stdint.h>
+#include "m_bus.h"
+#include "m_rf.h"
 
 ISR(TIMER1_COMPA_vect) {
   PORTB &= ~(1 << 4);
@@ -7,12 +8,13 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 ISR(TIMER1_COMPB_vect) {
-  DDRE |= (1 << 6);
   PORTB |= (1 << 4);
 }
 
 int main(void) {
   cli();
+  m_bus_init();
+  m_rf_open(0x01, 0x4D, 0x03);
 
   /* configure output pin */
   DDRB |= 1 << 4;
