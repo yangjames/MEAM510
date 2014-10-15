@@ -1,47 +1,50 @@
+#include <stdint.h>
 #include "m_general.h"
 #include "m_bus.c"
 #include "m_rf.c"
-#include <math.h>
 
 #define PACKET_LENGTH 0x03
 #define ADDRESS 0x4D
 #define CHANNEL 0x01
-#define RESOLUTION_50 50.0
-#define RESOLUTION_30 30.0
-#define PI 3.14159265
+#define RESOLUTION_50 50
 
-char buf[3];
-volatile int ovf;
+char buf[3] = {0,0,0};
 volatile int idx;
-volatile float frequency;
-float sin_table_30[31]={0.0000000, 0.2012985, 0.3943559, 0.5712682, 0.7247928, 0.8486443, 0.9377521, 0.9884683, 0.9987165, 0.9680771,
-			0.8978046, 0.7907757, 0.6513725, 0.4853020, 0.2993631, 0.1011683, -0.1011683, -0.2993631, -0.4853020, -0.6513725,
-			-0.7907757, -0.8978046, -0.9680771, -0.9987165, -0.9884683, -0.9377521, -0.8486443, -0.7247928, -0.5712682, -0.3943559, -0.2012985};
+volatile int timer3_ovf;
 
-float sin_table_50[51]={0.0000000, 0.1253332, 0.2486899, 0.3681245, 0.4817537, 0.5877852, 0.6845471, 0.7705132, 0.8443279, 0.9048271,
-		     0.9510565, 0.9822872, 0.9980267, 0.9980267, 0.9822872, 0.9510565, 0.9048271, 0.8443279, 0.7705132, 0.6845471, 
-		     0.5877852, 0.4817537, 0.3681245, 0.2486899, 0.1253332, 0.0000000, -0.1253332, -0.2486899, -0.3681245, -0.4817537, 
-		     -0.5877852, -0.6845471, -0.7705132, -0.8443279, -0.9048271, -0.9510565, -0.9822872, -0.9980267, -0.9980267, -0.9822872,
-		     -0.9510565, -0.9048271, -0.8443279, -0.7705132, -0.6845471, -0.5877852, -0.4817537, -0.3681245, -0.2486899, -0.1253332, -0.0000000};
+int sin_table_50[50]={0x80,0x8f,0x9f,0xae,0xbd,0xca,0xd7,0xe2,0xeb,0xf3,
+		      0xf9,0xfd,0xff,0xff,0xfd,0xf9,0xf3,0xeb,0xe2,0xd7,
+		      0xca,0xbd,0xae,0x9f,0x8f,0x80,0x70,0x60,0x51,0x42,
+		      0x35,0x28,0x1d,0x14,0xc,0x6,0x2,0x0,0x0,0x2,
+		      0x6,0xc,0x14,0x1d,0x28,0x35,0x42,0x51,0x60,0x70};
 
-ISR(TIMER1_COMPA_vect) {
-  PORTB |= (1 << 4);
-  TCNT1 = 0;
-  idx++;
-  idx %= (int)(RESOLUTION_30+1);
-  OCR1B = (int)((0.5*sin_table_30[idx]+0.5)*OCR1A);
+ISR(TIMER3_OVF_vect) {
+  timer3_ovf++;
+  if (timer3_ovf*65536+TCNT3 >= 160000*buf[2]) {
+    TCCR1B &= ~(1 << CS10);
+    TCNT1 = 0;
+    TCCR3B &= ~(1 << CS30);
+    TCNT3 = 0;
+    timer3_ovf = 0;
+    PORTB &= ~(1 << 6);
+  }
 }
 
-ISR(TIMER1_COMPB_vect) {
-  PORTB &= ~(1 << 4);
+ISR(TIMER1_OVF_vect) {
+  idx++;
+  idx %= RESOLUTION_50;
 }
 
 ISR(INT2_vect) {
   m_rf_read(buf, PACKET_LENGTH);
+  TCCR1B |= (1 << CS10);
+  TCCR3B |= (1 << CS30);
   PORTE ^= (1 << 6);
 }
 
 int main(void) {
+  idx = 0;
+
   /* disable global interrupts */
   cli();
 
@@ -50,8 +53,8 @@ int main(void) {
   m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH);
 
   /* configure output pins */
-  DDRB |= 1 << 4; // pwm pin
-  PORTB &= ~(1 << 4);
+  DDRB |= (1 << 6); // pwm pin
+  PORTB &= ~(1 << 6);
 
   DDRE |= 1 << 6; // rf status pin
   PORTE |= (1 << 6);
@@ -61,23 +64,36 @@ int main(void) {
   CLKPR = 0x00;
 
   /* configure timer 1 */
-  TCCR1A = 0x00; // regular timer 1 output compare operation
-  TCNT1 = 0x00; // set initial timer value to 0
-  OCR1A = 48484; // set output compare A default value
-  OCR1B = 24242; // set output compare B default value
-  TIMSK1 = 0x06; // enable A and B output compares
-  TCCR1B = 0x01; // enable timer
+  TCCR1A = 0x00; // reset timer configuration registers
+  TCCR1B = 0x00;
 
+  TCCR1A |= (1 << WGM10) | (1 << WGM11); // set to mode 15 waveform gen
+  TCCR1B |= (1 << WGM12) | (1 << WGM13);
+
+  TCCR1A |= (1 << COM1B1); // clear at OCR1B, set at OCR1A rollover
+  TCCR1A &= ~(1 << COM1B0);
+
+  TCNT1 = 0x00; // enable overflow interrupt
+  OCR1A = 0; // set output compare A default value
+  OCR1B = 0; // set output compare B default value
+
+  TIMSK1 = 0x01; // enable timer overflow interrupt
+  //TCCR1B |= (1 << CS10); // enable timer
+
+  /* configure timer 3 */
+  TCCR3A = 0x00;
+  TCCR3B = 0x00;
+  TIMSK3 = 0x01; // enable timer overflow interrupt
+  
   /* enable global interrupts */
   sei();
 
   /* local variables */
-  frequency = 440.0;
-  idx = 0;
-  OCR1A = 1616;//(int)(16000000.0/frequency/RESOLUTION);
-
   /* main loop */
-  while(1);
+  while(1) {
+    OCR1A = 160000000/(*(int*)buf*RESOLUTION_50);
+    OCR1B = (long)sin_table_50[idx]*(long)OCR1A/(long)0xff;
+  }
 
   /* return */
   return 0;
