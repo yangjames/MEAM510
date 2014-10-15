@@ -28,7 +28,7 @@ PARENTS    =
 DEVICE     = atmega32u4
 CLOCK      = 16000000
 
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -lm
 
 # symbolic targets: 
 all:	main.hex
