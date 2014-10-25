@@ -1,17 +1,11 @@
 #include "m_general.h"
 #include "m_usb.c"
 
-/* FSM states */
-typedef enum {
-  SEARCH,
-  STOP,
-  SHOOT
-};
-
 /* pre-declarations */
 void init();
 
-/* main */
+volatile int max_adc;
+
 int main(void) {
   /* initialize microcontroller */
   init();
@@ -27,26 +21,20 @@ int main(void) {
 
   /* main loop */
   while(1) {
-    /* m_usb_tx_string("C6: "); */
-    /* m_usb_tx_int((PINC & (1 << 6)) > 0); */
-    /* m_usb_tx_string(" C7: "); */
-    /* m_usb_tx_int((PINC & (1 << 7)) > 0); */
-    /* m_usb_tx_string("\n\r"); */
-    if (PINC & (1 << 6) == 0)
+    //m_usb_tx_int(ADCW);
+    //m_usb_tx_string("\n\r");
+
+    /* turn on yellow LED at 50% charge */
+    if ((PINC & (1 << 7)) == 0)
       PORTB |= (1 << 0);
     else
       PORTB &= ~(1 << 0);
-    if (PINC & (1 << 7) == 0)
+
+    /* turn on green LED at 100% charge */
+    if ((PINC & (1 << 6)) == 0)
       PORTD |= (1 << 5);
     else
       PORTD &= ~(1 << 5);
-
-    if (ADCW > 512) {
-      m_green(OFF);
-    }
-    else {
-      m_green(ON);
-    }
   }
 
   return 0;
@@ -59,21 +47,20 @@ void init() {
   CLKPR = 1 << CLKPCE;
   CLKPR = 0x00;
 
-  /* initialize debugging tool */
   m_usb_init();
   //while(!m_usb_isconnected());
 
-  /* initialize kicker pin */
-  // TODO
+  /* intialize output pins */
+  DDRB |= (1 << 4) | (1 << 5) | (1 << 6); // pwm, direction pins
+  DDRB |= (1 << 1); // charge / kick pin
 
-  /* intialize motor pins and PWM timer */
-  DDRB |= (1 << 0) | (1 << 1) | (1 << 4) | (1 << 5) | (1 << 6); // pwm, direction pins
-  PORTB |= (1 << 4) | (1 << 1); // stay in one direction, start charging
-
+  DDRB |= (1 << 0); // charge inidicator LEDs
   DDRD |= (1 << 5);
-  //PORTD |= (1 << 5);
-  
 
+  PORTB |= (1 << 4); // set motor direction
+  PORTB |= (1 << 1); //start charging
+
+  /* initialize motor PWM timer1 */
   TCCR1A |= (1 << WGM10) | (1 << WGM11); // waveform 15
   TCCR1B |= (1 << WGM12) | (1 << WGM13);
 
@@ -81,20 +68,25 @@ void init() {
   OCR1A = 1200; // set to 14kHz at 50% duty cycle
   OCR1B = 600;
 
+  /* initialize kicker PWM timer 3 */
+  
+
   /* initialize status LED */
   DDRE |= (1 << 6);
   PORTE |= (1 << 6);
 
   /* configure ADC */
-  
-  ADMUX |= (1 << REFS0) | (1 << MUX0); // set reference voltage to external AREF
-  ADCSRA |= (1 << ADEN) | (1 << ADIE) | (1 << ADPS2); // enable ADC
+  ADMUX |= (1 << REFS0) | (1 << MUX0); // set reference voltage to 5V
+  ADCSRA |= (1 << ADEN) | (1 << ADIE) | (1 << ADPS2); // enable ADC, enable interrupt, prescale by 16
   
   sei();
 }
 
+
 ISR(ADC_vect) {
-  //m_usb_tx_int(ADCW);
-  //m_usb_tx_string("\n\r");
+  if (ADCW > max_adc)
+    max_adc = ADCW;
+  if (ADCW > 700)
+    PORTB &= ~(1 << 4);
   ADCSRA |= (1 << ADSC);
 }
