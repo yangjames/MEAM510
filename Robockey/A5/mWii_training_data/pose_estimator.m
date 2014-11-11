@@ -66,7 +66,7 @@ R14 = [cos(beta14_gnd) sin(beta14_gnd); -sin(beta14_gnd) cos(beta14_gnd)];
 R41 = [cos(beta41_gnd) sin(beta41_gnd); -sin(beta41_gnd) cos(beta41_gnd)];
 
 %% import data
-load('A.mat');
+load('B.mat');
 p1 = rawStarData(:,[1 5]);
 p2 = rawStarData(:,[2 6]);
 p3 = rawStarData(:,[3 7]);
@@ -75,7 +75,7 @@ p4 = rawStarData(:,[4 8]);
 scale = 5;
 offset = 0.5*[1023 1023];
 
-figure(1)
+figure(2)
 clf
 grid on
 hold on
@@ -87,12 +87,19 @@ p2_gnd_plot = plot(scale*p2_gnd(1)+offset(1),scale*p2_gnd(2)+offset(2),'g-*');
 p3_gnd_plot = plot(scale*p3_gnd(1)+offset(1),scale*p3_gnd(2)+offset(2),'b-*');
 p4_gnd_plot = plot(scale*p4_gnd(1)+offset(1),scale*p4_gnd(2)+offset(2),'k-*');
 
+figure(1)
+clf
+grid on
+hold on
+axis equal
+set(gca,'xlim',[0 1023], 'ylim',[0 1023]);
+
 p1_plot = plot(p1(1,1),p1(1,2),'r-*');
 p2_plot = plot(p2(1,1),p2(1,2),'g-*');
 p3_plot = plot(p3(1,1),p3(1,2),'b-*');
 p4_plot = plot(p4(1,1),p4(1,2),'k-*');
 
-for i = 1:size(rawStarData,1)
+for i = 1:10%size(rawStarData,1)
     % calculate point-to-point vectors
     p12 = p2(i,:)-p1(i,:);
     p23 = p3(i,:)-p2(i,:);
