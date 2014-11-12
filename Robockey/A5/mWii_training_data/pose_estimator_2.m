@@ -79,7 +79,7 @@ beta = [0 beta12_gnd beta13_gnd beta14_gnd;...
     beta41_gnd beta42_gnd beta43_gnd 0];
 
 %% load data
-load('B.mat');
+load('A.mat');
 p1 = [1 5];
 p2 = [2 6];
 p3 = [3 7];
@@ -117,7 +117,8 @@ p4_plot = plot(rawStarData(1,p4(1)),rawStarData(1,p4(2)),'k-*');
 
 invalid = [1023 1023];
 angle = 0;
-for i = 1:1%size(rawStarData,1)
+for i = 1:size(rawStarData,1)
+    %{
     % check which points are valid
     valid = [sum(rawStarData(i,p1) ~= invalid) == 2;...
         sum(rawStarData(i,p2) ~= invalid) == 2;...
@@ -159,6 +160,7 @@ for i = 1:1%size(rawStarData,1)
             end
         end
         potentially_valid
+    %}
         % check which points are valid
         valid = [sum(rawStarData(i,p1) ~= invalid) == 2;...
             sum(rawStarData(i,p2) ~= invalid) == 2;...
@@ -209,7 +211,7 @@ for i = 1:1%size(rawStarData,1)
                 angle = -angle;
             end
             angle*180/pi
-        end
+        %end
     end
     % redraw
     set(p1_plot,'xdata',rawStarData(i,p1(1)),'ydata',rawStarData(i,p1(2)));
