@@ -1,8 +1,16 @@
-function [orientation center]=localize(best_const1, best_const2, best_const3, best_const4)
+function [orientation center height]=localize(best_const1, best_const2, best_const3, best_const4)
 p1_gnd=[0   14.5];
 p2_gnd=[-11.655 8.741];
 p3_gnd=[10.563 2.483];
 p4_gnd=[0 -14.5];
+
+% scale factor cm/pixels
+unit_scale = 500./[48.0104;53.6004;98.8433;82.0975;90.1388;69.2892];
+availability_matrix = ...
+    [1 1 1 0 0 0;...
+    1 0 0 1 1 0;...
+    0 1 0 1 0 1;...
+    0 0 1 0 1 1];
 
 % matrix of our constellation and ground truth
 p = [best_const1;best_const2;best_const3;best_const4];
@@ -41,8 +49,13 @@ if length(good_points) >2
     for i = 1:length(good_points)
         centers(i,:) = p(good_points(i),:)-scale*p_gnd(good_points(i),:).*[-sin(orientation) cos(orientation)];
     end
-    center = mean(centers);
+    center = mean(centers)-[1023 1023]/2;
+    
+    % get a height estimate for scaling distance measure
+    conversion_indices = find(sum(availability_matrix(good_points,:),1)==2);
+    height = unit_scale(conversion_indices)'*vector_norms/length(good_points);
 else
     orientation = nan;
     center = [nan nan];
+    height = nan;
 end

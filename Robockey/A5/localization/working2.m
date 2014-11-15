@@ -50,7 +50,7 @@ t1_p3_plot = plot(best_const3(1),best_const3(2),'b*');
 t1_p4_plot = plot(best_const4(1),best_const4(2),'k*');
 t1_c_plot = plot(0,0,'m*');
 
-legend('Const1','Cosnt2','Const3','Const4');
+legend('Const1','Cosnt2','Const3','Const4','Center');
 
 
 for i=1:size(rawStarData,1)
@@ -60,25 +60,22 @@ star2=s2(i,:);
 star3=s3(i,:);
 star4=s4(i,:);
 
-% [best_const1, best_const2, best_const3, best_const4, error]=best_triangle(star1,star2,star3,star4);
-% [best_const1, best_const2, best_const3, best_const4, error]=likely_solution(star1,star2,star3,star4);
-
 [best_const1, best_const2, best_const3, best_const4, error]=stupid_solution(star1,star2,star3,star4);
-[orientation center]=localize(best_const1, best_const2, best_const3, best_const4);
+[orientation center height]=localize(best_const1, best_const2, best_const3, best_const4);
 
-
+r = height*center*32/1024*pi/180;
 
 set(p1_plot,'xdata',s1(i,1),'ydata',s1(i,2));
 set(p2_plot,'xdata',s2(i,1),'ydata',s2(i,2));
 set(p3_plot,'xdata',s3(i,1),'ydata',s3(i,2));
 set(p4_plot,'xdata',s4(i,1),'ydata',s4(i,2));
 
-title(num2str(orientation))
+%title(num2str(orientation))
 set(t1_p1_plot,'xdata',best_const1(1,1),'ydata',best_const1(1,2));
 set(t1_p2_plot,'xdata',best_const2(1,1),'ydata',best_const2(1,2));
 set(t1_p3_plot,'xdata',best_const3(1,1),'ydata',best_const3(1,2));
 set(t1_p4_plot,'xdata',best_const4(1,1),'ydata',best_const4(1,2));
-set(t1_c_plot,'xdata',center(1),'ydata',center(2));
+set(t1_c_plot,'xdata',center(1)+1023/2,'ydata',center(2)+1023/2);
 drawnow
 pause
 end
