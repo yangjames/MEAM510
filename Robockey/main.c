@@ -23,6 +23,16 @@ int main(void) {
   int i;
   uint16_t constellation[12];
   uint16_t* constellation_ptr = constellation;
+  int imu[9];
+  int* imu_ptr = imu;
+  float x_ddot = 0.0, x_dot = 0.0, x = 0.0, x_ddot_prev = 0.0,
+    y_ddot = 0.0, y_dot = 0.0, y = 0.0, y_ddot_prev = 0.0,
+    yaw = 0.0, yaw_dot = 0.0, prev_yaw_dot = 0.0,
+    alpha_lp, alpha_hp,
+    cutoff_high = 0.001, cutoff_low = 30.0;
+  float RC_high = 1/(cutoff_high*2*PI);
+  float RC_low = 1/(cutoff_low*2*PI);
+
   /* main loop */
   while(1) {
     /* check if we got a new packet */
@@ -39,20 +49,44 @@ int main(void) {
     /* get constellation */
     m_wii_read(constellation);
 
-    for (i = 0; i < 12; i++) {
-      m_usb_tx_int(*constellation_ptr++);
-      m_usb_tx_string(" ");
-    }
-    m_usb_tx_string("\n\r");
-    constellation_ptr = constellation;
+    /* process IMU data */
+    if (m_imu_raw(imu)) {
+      alpha_lp = dt/(dt+RC_low);
+      alpha_hp = RC_high/(dt+RC_high);
+      yaw_dot = yaw_dot*alpha_hp + (imu[5]*GYRO_SCALE - prev_yaw_dot)*alpha_hp;
+      yaw += dt*yaw_dot;
+      if (yaw > PI)
+	yaw -= 2*PI;
+      if (yaw <= -PI)
+	yaw += 2*PI;
+      prev_yaw_dot = imu[5]*GYRO_SCALE;
 
-    /* m_usb_tx_string("delta t: "); */
-    /* m_usb_tx_int((int)(dt*1000000)); */
-    /* m_usb_tx_string("us\n\r"); */
+      //x_ddot = x_ddot*(1-alpha_lp) + alpha_lp*(ACC_SCALE*imu[0]*sin(yaw) + ACC_SCALE*imu[1]*cos(yaw));
+      //y_ddot = y_ddot*(1-alpha_lp)+alpha_lp*(-ACC_SCALE*imu[0]*cos(yaw) + ACC_SCALE*imu[1]*sin(yaw));
+      x_ddot = x_ddot*alpha_hp + (-ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw) - x_ddot_prev)*alpha_hp;
+      x_ddot_prev = -ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw);
+      x_dot += x_ddot*dt;
+      x += x_dot*dt;
+
+      y_ddot = y_ddot*alpha_hp + (ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw) - y_ddot_prev)*alpha_hp;
+      y_ddot_prev = ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw);
+      y_dot += y_ddot*dt;
+      y += y_dot*dt;
+
+      //m_usb_tx_int((int)(x*100));
+      //m_usb_tx_int((int)(imu[0]*ACC_SCALE*100));
+      //m_usb_tx_string(" ");
+      //m_usb_tx_int((int)(y*100));
+      //m_usb_tx_int((int)(imu[1]*ACC_SCALE*100));
+      //m_usb_tx_string(" ");
+      //m_usb_tx_int((int)(yaw*180/PI));
+      //m_usb_tx_string("\n\r");
+    }
   }
 
   return 0;
 }
+
 
 /* initialization code */
 void init() {
@@ -67,6 +101,7 @@ void init() {
   m_bus_init();
   while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
   m_wii_open();
+  m_imu_init(0,0);
 
   /* initialize drivers */
   init_motor_drivers();
