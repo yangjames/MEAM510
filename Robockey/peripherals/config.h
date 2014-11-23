@@ -1,4 +1,6 @@
+#pragma once
 #include "m_includes.h"
+#include <stdint.h>
 
 /* localization values and definitions */
 #define PI 3.14159265359
@@ -25,11 +27,11 @@ typedef enum {
 #define STATUS_2 5
 
 /* solenoid pins */
+#define KICKER_DDR_PORT DDRD
 #define KICKER_PORT PORTD
 #define KICKER 7
 
 /* radio parameters */
 #define ADDRESS 0x04
 #define CHANNEL 0x01
-#define PACKET_LENGTH 0x03
-
+#define PACKET_LENGTH 10
