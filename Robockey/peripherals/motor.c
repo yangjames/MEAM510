@@ -22,11 +22,52 @@ void init_motor_drivers() {
   OCR1C = 0;
 }
 
-/* set motor drivers */
+/* set motor duty cycle */
 void set_duty_cycle(int motor, float duty_cycle) {
   switch (motor) {
   case MOTOR_L: OCR1B = OCR1A*duty_cycle; break;
   case MOTOR_R: OCR1C = OCR1A*duty_cycle; break;
+  default: break;
+  }
+}
+
+/* set motor direction */
+void set_direction(int motor, int direction) {
+  switch (motor) {
+  case MOTOR_L: {
+    switch (direction) {
+    case CW:
+      MOTOR_PORT |= (1 << L_DIR_1);
+      MOTOR_PORT &= ~(1 << L_DIR_2);
+      break;
+    case CCW:
+      MOTOR_PORT |= (1 << L_DIR_2);
+      MOTOR_PORT &= ~(1 << L_DIR_1);
+      break;
+    case BRAKE:
+      MOTOR_PORT &= ~((1 << L_DIR_1) | (1 << L_DIR_2));
+      break;
+    default: break;
+    }
+    break;
+  }
+  case MOTOR_R: {
+   switch (direction) {
+    case CW:
+      MOTOR_PORT |= (1 << R_DIR_1);
+      MOTOR_PORT &= ~(1 << R_DIR_2);
+      break;
+    case CCW:
+      MOTOR_PORT |= (1 << R_DIR_2);
+      MOTOR_PORT &= ~(1 << R_DIR_1);
+      break;
+    case BRAKE:
+      MOTOR_PORT &= ~((1 << R_DIR_1) | (1 << R_DIR_2));
+      break;
+    default: break;
+    }
+    break;
+  }
   default: break;
   }
 }

@@ -20,6 +20,11 @@ typedef enum {
   MOTOR_L = 1,
   MOTOR_R
 };
+typedef enum {
+  CW = 1,
+  CCW,
+  BRAKE
+};
 
 /* status LED pins */
 #define STATUS_PORT PORTD
