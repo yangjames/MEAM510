@@ -77,7 +77,7 @@ set(t1_p3_plot,'xdata',best_const3(1,1),'ydata',best_const3(1,2));
 set(t1_p4_plot,'xdata',best_const4(1,1),'ydata',best_const4(1,2));
 set(t1_c_plot,'xdata',center(1)+1023/2,'ydata',center(2)+1023/2);
 drawnow
-pause
+%pause
 end
 
 %%
