@@ -7,7 +7,7 @@ float p_gnd[4][2] = {{0, 14.5},
 float distances[6];
 float triangles[4][3];
 
-void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
+int match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   int i, j;
   /* calculate average */
   float avg[2] = {(constellation[0] + constellation[3] + constellation[6] + constellation[9])/4.0,
@@ -74,7 +74,7 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
     ordered_points[2][1] = (int)sort_mat[0][3];
     ordered_points[3][0] = (int)sort_mat[3][2];
     ordered_points[3][1] = (int)sort_mat[3][3];
-    
+    return 1;
   }
   else {
     //TODO: 3 point detection
@@ -87,6 +87,7 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
     ordered_points[2][1] = 1023;
     ordered_points[3][0] = 1023;
     ordered_points[3][1] = 1023;
+    return 0;
   }
 }
 
@@ -115,10 +116,11 @@ void init_localization_params() {
   triangles[3][2] = distances[5]/distances[3];
 }
 
-void match_three(uint16_t* constellation, uint16_t ordered_points[][2]) {
+int match_three(uint16_t* constellation, uint16_t ordered_points[][2]) {
+  return 0;
 }
 
-void localize(uint16_t ordered_points[][2],
+int localize(uint16_t ordered_points[][2],
 	      float* center, float* orientation, float* height) {
   if (ordered_points[0][0] != 1023 && ordered_points[0][1] != 1023 
       && ordered_points[3][0] != 1023 && ordered_points[3][1] != 1023) {
@@ -127,19 +129,22 @@ void localize(uint16_t ordered_points[][2],
     *orientation = -atan2(((float)ordered_points[3][1]-ordered_points[0][1]),
 			 ((float)ordered_points[3][0]-ordered_points[0][0]))+PI/2;
     *height = 0;
+    return 1;
   }
   else {
     center[0] = 1023;
     center[1] = 1023;
     *orientation = 0;
     *height = 0;
+    return 0;
   }
 }
 
-void inverse_kinematics(float* center, float* orientation, float* height,
+int inverse_kinematics(float* center, float* orientation, float* height,
 			float* x, float* y, float* yaw) {
   float x_const = 750*center[0]*32/1024*PI/180, y_const = 750*center[1]*32/1024*PI/180;
   *yaw = (*orientation)*-1;
   *x = -cos(*yaw)*x_const - sin(*yaw)*y_const;
-  *y = sin(*yaw)*x_const - cos(*yaw)*y_const;
+  *y = -sin(*yaw)*x_const + cos(*yaw)*y_const;
+  return 1;
 }

@@ -23,7 +23,10 @@ int main(void) {
   /* localization variables */
   uint16_t constellation[12];
   uint16_t ordered_points[4][2];
-  float center[2], height, orientation, x_const, y_const, yaw_const;
+  float center[2], height, orientation, 
+    x_const = 0.0, y_const = 0.0, yaw_const = 0.0,
+    x_const_filtered = 0.0, y_const_filtered = 0.0, yaw_const_filtered = 0.0;
+  int update = 0;
 
   /* controls and filtering variables */
   float dt = 0.0;
@@ -31,10 +34,15 @@ int main(void) {
   float x_ddot = 0.0, x_dot = 0.0, x = 0.0, x_ddot_prev = 0.0,
     y_ddot = 0.0, y_dot = 0.0, y = 0.0, y_ddot_prev = 0.0,
     yaw = 0.0, yaw_dot = 0.0, prev_yaw_dot = 0.0,
-    /*alpha_lp,*/ alpha_hp,
-    cutoff_high = 0.001/*, cutoff_low = 30.0*/;
-  float RC_high = 1/(cutoff_high*2*PI);
-  /*float RC_low = 1/(cutoff_low*2*PI);*/
+    alpha_lp, cutoff_low = 3.0, RC_low = 1/(cutoff_low*2*PI),
+    alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI);
+
+  /* start motors */
+  set_direction(MOTOR_L, CW);
+  set_duty_cycle(MOTOR_L, 0.5);
+  set_direction(MOTOR_R, CCW);
+  set_duty_cycle(MOTOR_R, 0.3);
+  enable_motors();
 
   /* main loop */
   while(1) {
@@ -50,35 +58,65 @@ int main(void) {
     TCNT3 = 0;
 
     /* get constellation */
+    alpha_lp = dt/(dt+RC_low);
     m_wii_read(constellation);
-    match_points(constellation, ordered_points);
-    localize(ordered_points, center, &orientation, &height);
-    inverse_kinematics(center, &orientation, &height, &x_const, &y_const, &yaw_const);
+    if (match_points(constellation, ordered_points))
+      if (localize(ordered_points, center, &orientation, &height))
+	update = inverse_kinematics(center, &orientation, &height, &x_const, &y_const, &yaw_const);
+    
+    if (update) {
+      y_const_filtered = y_const*(alpha_lp) + (1-alpha_lp)*y_const_filtered;
+      x_const_filtered = x_const*(alpha_lp) + (1-alpha_lp)*x_const_filtered;
+      yaw_const_filtered = yaw_const*(alpha_lp) + (1-alpha_lp)*yaw_const_filtered;
+      /* m_usb_tx_int((int)center[0]); */
+      /* m_usb_tx_string(","); */
+      /* m_usb_tx_int((int)center[1]); */
+      /* m_usb_tx_string(","); */
+      m_usb_tx_int((int)x_const_filtered);
+      m_usb_tx_string(",");
+      m_usb_tx_int((int)y_const_filtered);
+      m_usb_tx_string(",");
+      m_usb_tx_int((int)(yaw_const_filtered*180/PI));
+      m_usb_tx_string("\n");
+      update = 0;
+    }
+    /* m_usb_tx_int(constellation[0]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[1]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[3]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[4]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[6]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[7]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[9]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(constellation[10]); */
+    /* m_usb_tx_string(","); */
 
-    //m_usb_tx_string("B,");
-    m_usb_tx_int(ordered_points[0][0]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[0][1]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[1][0]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[1][1]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[2][0]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[2][1]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[3][0]);
-    m_usb_tx_string(",");
-    m_usb_tx_int(ordered_points[3][1]);
-    m_usb_tx_string(",");
-    m_usb_tx_int((int)x_const);
-    m_usb_tx_string(",");
-    m_usb_tx_int((int)y_const);
-    m_usb_tx_string(",");
-    m_usb_tx_int((int)(yaw_const*180/PI));
-    //m_usb_tx_string(",E\n");
-    m_usb_tx_string("\n");
+    /* m_usb_tx_int(ordered_points[0][0]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[0][1]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[1][0]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[1][1]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[2][0]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[2][1]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[3][0]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int(ordered_points[3][1]); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int((int)x_const); */
+    /* m_usb_tx_string(","); */
+    /* m_usb_tx_int((int)y_const); */
+    /* m_usb_tx_string(","); */
 
     /* process IMU data */
     if (m_imu_raw(imu)) {
