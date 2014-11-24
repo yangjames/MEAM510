@@ -59,6 +59,7 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
       }
     }
 
+    /* assign ordered points */
     ordered_points[0][0] = (int)sort_mat[1][2];
     ordered_points[0][1] = (int)sort_mat[1][3];
     ordered_points[1][0] = (int)sort_mat[2][2];
@@ -68,13 +69,9 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
     ordered_points[3][0] = (int)sort_mat[3][2];
     ordered_points[3][1] = (int)sort_mat[3][3];
     
-    /* for (i = 0; i < 4; i++) { */
-    /*   for (j = 0; j < 4; j++) */
-    /* 	printf("%5.6f ", sort_mat[i][j]); */
-    /*   printf("\n"); */
-    /* } */
   }
   else {
+    //TODO: 3 point detection
     ordered_points[0][0] = 0;
     ordered_points[0][1] = 0;
     ordered_points[1][0] = 0;
@@ -86,41 +83,7 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   }
 }
 
-/* void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
-  /\* calculate average *\/
-  float avg[2] = {(constellation[0] + constellation[3] + constellation[6] + constellation[9])/4.0,
-		  (constellation[1] + constellation[4] + constellation[7] + constellation[10])/4.0};
+void localize(uint16_t ordered_points[][2],
+	      float* center, float* orientation, float* height) {
 
-  /\* calculate square of mean centered constellation points *\/
-  float sq_differences[4][2] = {{constellation[0]-avg[0],constellation[1]-avg[1]},
-			     {constellation[3]-avg[0],constellation[4]-avg[1]},
-			     {constellation[6]-avg[0],constellation[7]-avg[1]},
-			     {constellation[9]-avg[0],constellation[10]-avg[1]}};
-  int i, j;
-  for (i = 0; i < 4; i++)
-    for (j = 0; j < 2; j++)
-      sq_differences[i][j]*=sq_differences[i][j];
-
-  /\* calculate L2 norm *\/
-  float abs_differences[4] = {sq_differences[0][0]+sq_differences[0][1],
-			      sq_differences[1][0]+sq_differences[1][1],
-			      sq_differences[2][0]+sq_differences[2][1],
-			      sq_differences[3][0]+sq_differences[3][1]};
-
-  /\* get difference of max and min values in abs_differences *\/
-  float min = abs_differences[0], max = abs_differences[0];
-  for (i = 1; i < 4; i++) {
-    if (abs_differences[i] < min) min = abs_differences[i];
-    if (abs_differences[i] > max) max = abs_differences[i];
-  }
-  float range = max-min;
-
-  if (range < 3000) {
-    
-  }
-  else;
-}
-
-void localize(uint16_t ordered_points[][2], float* center, float* orientation, float* height) {
-  
 }

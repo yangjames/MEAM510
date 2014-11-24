@@ -19,10 +19,14 @@ int main(void) {
   /* system initialize */
   init();
 
+  /* localization variables */
+  uint16_t constellation[12];
+  uint16_t ordered_points[4][2];
+  float center[2], height, orientation;
+
+  /* controls and filtering variables */
   float dt = 0.0;
   int i;
-  uint16_t constellation[12];
-  uint16_t* constellation_ptr = constellation;
   int imu[9];
   int* imu_ptr = imu;
   float x_ddot = 0.0, x_dot = 0.0, x = 0.0, x_ddot_prev = 0.0,
@@ -48,6 +52,8 @@ int main(void) {
 
     /* get constellation */
     m_wii_read(constellation);
+    match_points(constellation, ordered_points);
+    localize(ordered_points, center, &orientation, &height);
 
     /* process IMU data */
     if (m_imu_raw(imu)) {
