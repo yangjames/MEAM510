@@ -27,16 +27,14 @@ int main(void) {
 
   /* controls and filtering variables */
   float dt = 0.0;
-  int i;
   int imu[9];
-  int* imu_ptr = imu;
   float x_ddot = 0.0, x_dot = 0.0, x = 0.0, x_ddot_prev = 0.0,
     y_ddot = 0.0, y_dot = 0.0, y = 0.0, y_ddot_prev = 0.0,
     yaw = 0.0, yaw_dot = 0.0, prev_yaw_dot = 0.0,
-    alpha_lp, alpha_hp,
-    cutoff_high = 0.001, cutoff_low = 30.0;
+    /*alpha_lp,*/ alpha_hp,
+    cutoff_high = 0.001/*, cutoff_low = 30.0*/;
   float RC_high = 1/(cutoff_high*2*PI);
-  float RC_low = 1/(cutoff_low*2*PI);
+  /*float RC_low = 1/(cutoff_low*2*PI);*/
 
   /* main loop */
   while(1) {
@@ -57,17 +55,34 @@ int main(void) {
     localize(ordered_points, center, &orientation, &height);
     inverse_kinematics(center, &orientation, &height, &x_const, &y_const, &yaw_const);
 
-    m_usb_tx_string("B,");
+    //m_usb_tx_string("B,");
+    m_usb_tx_int(constellation[0]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[1]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[3]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[4]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[6]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[7]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[9]);
+    m_usb_tx_string(",");
+    m_usb_tx_int(constellation[10]);
+    m_usb_tx_string(",");
     m_usb_tx_int((int)x_const);
     m_usb_tx_string(",");
     m_usb_tx_int((int)y_const);
     m_usb_tx_string(",");
     m_usb_tx_int((int)(yaw_const*180/PI));
-    m_usb_tx_string(",E\n");
+    //m_usb_tx_string(",E\n");
+    m_usb_tx_string("\n");
 
     /* process IMU data */
     if (m_imu_raw(imu)) {
-      alpha_lp = dt/(dt+RC_low);
+      //alpha_lp = dt/(dt+RC_low);
       alpha_hp = RC_high/(dt+RC_high);
       yaw_dot = yaw_dot*alpha_hp + (imu[5]*GYRO_SCALE - prev_yaw_dot)*alpha_hp;
       yaw += dt*yaw_dot;
@@ -88,15 +103,6 @@ int main(void) {
       y_ddot_prev = ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw);
       y_dot += y_ddot*dt;
       y += y_dot*dt;
-
-      //m_usb_tx_int((int)(x*100));
-      //m_usb_tx_int((int)(imu[0]*ACC_SCALE*100));
-      //m_usb_tx_string(" ");
-      //m_usb_tx_int((int)(y*100));
-      //m_usb_tx_int((int)(imu[1]*ACC_SCALE*100));
-      //m_usb_tx_string(" ");
-      //m_usb_tx_int((int)(yaw*180/PI));
-      //m_usb_tx_string("\n\r");
     }
   }
 

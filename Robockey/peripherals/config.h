@@ -16,10 +16,12 @@
 #define L_DIR_2 1
 #define R_DIR_1 2
 #define R_DIR_2 3
+
 typedef enum {
   MOTOR_L = 1,
   MOTOR_R
 };
+
 typedef enum {
   CW = 1,
   CCW,

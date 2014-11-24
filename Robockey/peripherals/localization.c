@@ -72,15 +72,43 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   }
   else {
     //TODO: 3 point detection
-    ordered_points[0][0] = 1023;
-    ordered_points[0][1] = 1023;
-    ordered_points[1][0] = 1023;
-    ordered_points[1][1] = 1023;
-    ordered_points[2][0] = 1023;
-    ordered_points[2][1] = 1023;
-    ordered_points[3][0] = 1023;
-    ordered_points[3][1] = 1023;
+    match_three(constellation, ordered_points);
+    /* ordered_points[0][0] = 1023; */
+    /* ordered_points[0][1] = 1023; */
+    /* ordered_points[1][0] = 1023; */
+    /* ordered_points[1][1] = 1023; */
+    /* ordered_points[2][0] = 1023; */
+    /* ordered_points[2][1] = 1023; */
+    /* ordered_points[3][0] = 1023; */
+    /* ordered_points[3][1] = 1023; */
   }
+}
+
+void init_localization_params() {
+  /* assign distances from ground data */
+  int i, j, k, iterator = 0;
+  for (i = 0; i < 4; i++) {
+    for (j = i+1; j < 4; j++) {
+      distances[iterator++] = (p_gnd[i][0]-p_gnd[j][0])*(p_gnd[i][0]-p_gnd[j][0])+(p_gnd[i][1]-p_gnd[j][1])*(p_gnd[i][1]-p_gnd[j][1]);
+    }
+  }
+
+  /* assign triangles */
+  triangles[0][0] = distances[0]/distances[3];
+  triangles[0][1] = distances[1]/distances[3];
+  triangles[0][2] = distances[0]/distances[1];
+  triangles[1][0] = distances[1]/distances[2];
+  triangles[1][1] = distances[5]/distances[2];
+  triangles[1][2] = distances[1]/distances[5];
+  triangles[2][0] = distances[0]/distances[2];
+  triangles[2][1] = distances[4]/distances[2];
+  triangles[2][2] = distances[0]/distances[4];
+  triangles[3][0] = distances[5]/distances[4];
+  triangles[3][1] = distances[3]/distances[4];
+  triangles[3][2] = distances[5]/distances[3];
+}
+
+void match_three(uint16_t* constellation, uint16_t ordered_points[][2]) {
 }
 
 void localize(uint16_t ordered_points[][2],
