@@ -72,18 +72,31 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   }
   else {
     //TODO: 3 point detection
-    ordered_points[0][0] = 0;
-    ordered_points[0][1] = 0;
-    ordered_points[1][0] = 0;
-    ordered_points[1][1] = 0;
-    ordered_points[2][0] = 0;
-    ordered_points[2][1] = 0;
-    ordered_points[3][0] = 0;
-    ordered_points[3][1] = 0;
+    ordered_points[0][0] = 1023;
+    ordered_points[0][1] = 1023;
+    ordered_points[1][0] = 1023;
+    ordered_points[1][1] = 1023;
+    ordered_points[2][0] = 1023;
+    ordered_points[2][1] = 1023;
+    ordered_points[3][0] = 1023;
+    ordered_points[3][1] = 1023;
   }
 }
 
 void localize(uint16_t ordered_points[][2],
 	      float* center, float* orientation, float* height) {
-
+  if (ordered_points[0][0] != 1023 && ordered_points[0][1] != 1023 
+      && ordered_points[3][0] != 1023 && ordered_points[3][1] != 1023) {
+    center[0] = (ordered_points[0][0]+ordered_points[3][0])/2.0-512;
+    center[1] = (ordered_points[0][1]+ordered_points[3][1])/2.0-384;
+    *orientation = -atan2((float)(ordered_points[3][1]-ordered_points[0][1]),
+			 (float)(ordered_points[3][0]-ordered_points[0][0]))+PI/2;
+    *height = 0;
+  }
+  else {
+    center[0] = 1023;
+    center[1] = 1023;
+    *orientation = 0;
+    *height = 0;
+  }
 }

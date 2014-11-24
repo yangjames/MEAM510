@@ -1,19 +1,27 @@
 #include <stdint.h>
 #include <stdio.h>
-
+#include <math.h>
+#define PI 3.1415926535
 void match_points(uint16_t* constellation, uint16_t ordered_points[][2]);
+
+void localize(uint16_t ordered_points[][2],
+	      float* center, float* orientation, float* height);
 
 int main(void) {
   uint16_t ordered_points[4][2];
   uint16_t constellation[12] = {536,462,3,459,420,6,517,385,9,557,422,12};
-
+  float center[2], orientation, height;
   match_points(constellation, ordered_points);
+  localize(ordered_points, center, &orientation, &height);
+  printf("pshaw\n");
   int i,j;
-  for (i = 0; i < 4; i++) {
-    for (j = 0; j < 2; j++)
-      printf("%d ", ordered_points[i][j]);
-    printf("\n");
-  }
+
+  printf("%5.6f %5.6f %5.6f\n", center[0], center[1], orientation*180/PI);
+  /* for (i = 0; i < 4; i++) { */
+  /*   for (j = 0; j < 2; j++) */
+  /*     printf("%d ", ordered_points[i][j]); */
+  /*   printf("\n"); */
+  /* } */
 
   return 0;
 }
@@ -85,11 +93,6 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
     ordered_points[3][0] = (int)sort_mat[3][2];
     ordered_points[3][1] = (int)sort_mat[3][3];
     
-    /* for (i = 0; i < 4; i++) { */
-    /*   for (j = 0; j < 4; j++) */
-    /* 	printf("%5.6f ", sort_mat[i][j]); */
-    /*   printf("\n"); */
-    /* } */
   }
   else {
     ordered_points[0][0] = 0;
@@ -102,3 +105,23 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
     ordered_points[3][1] = 0;
   }
 }
+
+void localize(uint16_t ordered_points[][2],
+	      float* center, float* orientation, float* height) {
+  if (ordered_points[0][0] != 1023 && ordered_points[0][1] != 1023 
+      && ordered_points[3][0] != 1023 && ordered_points[3][1] != 1023) {
+    center[0] = (ordered_points[0][0]+ordered_points[3][0])/2.0-512.0;
+
+    center[1] = (ordered_points[0][1]+ordered_points[3][1])/2.0-384.0;
+    *orientation = -atan2((float)(ordered_points[3][1]-ordered_points[0][1]),
+			 (float)(ordered_points[3][0]-ordered_points[0][0]))+PI/2;
+    *height = 0;
+  }
+  else {
+    center[0] = 1023;
+    center[1] = 1023;
+    *orientation = 0;
+    *height = 0;
+  }
+}
+
