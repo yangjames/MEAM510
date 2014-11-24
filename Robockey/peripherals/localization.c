@@ -1,5 +1,11 @@
-#include "config.h"
 #include "localization.h"
+
+float p_gnd[4][2] = {{0, 14.5},
+		     {-11.655, 8.741},
+		     {10.563, 2.483},
+		     {0, -14.5}};
+float distances[6];
+float triangles[4][3];
 
 void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   int i, j;
@@ -89,7 +95,8 @@ void init_localization_params() {
   int i, j, k, iterator = 0;
   for (i = 0; i < 4; i++) {
     for (j = i+1; j < 4; j++) {
-      distances[iterator++] = (p_gnd[i][0]-p_gnd[j][0])*(p_gnd[i][0]-p_gnd[j][0])+(p_gnd[i][1]-p_gnd[j][1])*(p_gnd[i][1]-p_gnd[j][1]);
+      distances[iterator++] = (p_gnd[i][0]-p_gnd[j][0])*(p_gnd[i][0]-p_gnd[j][0])
+	+(p_gnd[i][1]-p_gnd[j][1])*(p_gnd[i][1]-p_gnd[j][1]);
     }
   }
 

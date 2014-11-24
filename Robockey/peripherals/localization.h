@@ -1,9 +1,5 @@
-const float p_gnd[4][2] = {{0, 14.5},
-		     {-11.655, 8.741},
-		     {10.563, 2.483},
-		     {0, -14.5}};
-float distances[6];
-float triangles[4][3];
+#pragma once
+#include "config.h"
 
 void init_localization_params();
 void match_points(uint16_t* constellation,
