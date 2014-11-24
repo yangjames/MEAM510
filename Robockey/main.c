@@ -3,6 +3,7 @@
 #include "motor.h"
 #include "solenoid.h"
 #include "m_usb.h"
+#include "localization.h"
 
 /* predeclarations */
 void init();
@@ -22,7 +23,7 @@ int main(void) {
   /* localization variables */
   uint16_t constellation[12];
   uint16_t ordered_points[4][2];
-  float center[2], height, orientation;
+  float center[2], height, orientation, x_const, y_const, yaw_const;
 
   /* controls and filtering variables */
   float dt = 0.0;
@@ -54,6 +55,15 @@ int main(void) {
     m_wii_read(constellation);
     match_points(constellation, ordered_points);
     localize(ordered_points, center, &orientation, &height);
+    inverse_kinematics(center, &orientation, &height, &x_const, &y_const, &yaw_const);
+
+    m_usb_tx_string("B,");
+    m_usb_tx_int((int)x_const);
+    m_usb_tx_string(",");
+    m_usb_tx_int((int)y_const);
+    m_usb_tx_string(",");
+    m_usb_tx_int((int)(yaw_const*180/PI));
+    m_usb_tx_string(",E\n");
 
     /* process IMU data */
     if (m_imu_raw(imu)) {

@@ -7,16 +7,22 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]);
 void localize(uint16_t ordered_points[][2],
 	      float* center, float* orientation, float* height);
 
+void inverse_kinematics(float* center, float* orientation, float* height, 
+			float* x, float* y, float* yaw);
+
 int main(void) {
   uint16_t ordered_points[4][2];
   uint16_t constellation[12] = {536,462,3,459,420,6,517,385,9,557,422,12};
-  float center[2], orientation, height;
+  float center[2], orientation, height, x, y, yaw;
+
   match_points(constellation, ordered_points);
   localize(ordered_points, center, &orientation, &height);
-  printf("pshaw\n");
+  inverse_kinematics(center, &orientation, &height, &x, &y, &yaw);
+
   int i,j;
 
   printf("%5.6f %5.6f %5.6f\n", center[0], center[1], orientation*180/PI);
+  printf("%5.6f %5.6f %5.6f\n", x, y, yaw*180/PI);
   /* for (i = 0; i < 4; i++) { */
   /*   for (j = 0; j < 2; j++) */
   /*     printf("%d ", ordered_points[i][j]); */
@@ -29,8 +35,10 @@ int main(void) {
 void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   int i, j;
   /* calculate average */
-  float avg[2] = {(constellation[0] + constellation[3] + constellation[6] + constellation[9])/4.0,
-		  (constellation[1] + constellation[4] + constellation[7] + constellation[10])/4.0};
+  float avg[2] = {(constellation[0] + constellation[3] 
+		   + constellation[6] + constellation[9])/4.0,
+		  (constellation[1] + constellation[4] 
+		   + constellation[7] + constellation[10])/4.0};
 
   /* calculate sum of square differences */
   float sq_differences[4][2] = {{constellation[0]-avg[0],constellation[1]-avg[1]},
@@ -125,3 +133,10 @@ void localize(uint16_t ordered_points[][2],
   }
 }
 
+void inverse_kinematics(float* center, float* orientation, float* height,
+			float* x, float* y, float* yaw) {
+  float x_const = 750*center[0]*32/1024*PI/180, y_const = 750*center[1]*32/1024*PI/180;
+  *yaw = -(*orientation);
+  *x = -cos(*yaw)*x_const - sin(*yaw)*y_const;
+  *y = sin(*yaw)*x_const - cos(*yaw)*y_const;
+}

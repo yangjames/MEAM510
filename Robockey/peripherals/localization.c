@@ -1,4 +1,4 @@
-#include "m_includes.h"
+#include "config.h"
 #include "localization.h"
 
 void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
@@ -99,4 +99,12 @@ void localize(uint16_t ordered_points[][2],
     *orientation = 0;
     *height = 0;
   }
+}
+
+void inverse_kinematics(float* center, float* orientation, float* height,
+			float* x, float* y, float* yaw) {
+  float x_const = 750*center[0]*32/1024*PI/180, y_const = 750*center[1]*32/1024*PI/180;
+  *yaw = -(*orientation);
+  *x = -cos(*yaw)*x_const - sin(*yaw)*y_const;
+  *y = sin(*yaw)*x_const - cos(*yaw)*y_const;
 }
