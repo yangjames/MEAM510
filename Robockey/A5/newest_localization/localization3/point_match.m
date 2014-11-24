@@ -30,7 +30,7 @@ S23=sum((star2-star3).^2);
 m=[1,2,S12;1,3,S13;2,3,S23];
 m=sortrows(m,3);
 
-mT=[m(1,3)/m(3,3),m(2,3)/m(3,3),m(1,3)/m(2,3)];
+mT=[m(1,3)/m(3,3) m(2,3)/m(3,3) m(1,3)/m(2,3)];
 
 % find compare mT with pre defined triangles
 
@@ -39,7 +39,10 @@ mT_T134=sum(abs(mT-T134));
 mT_T124=sum(abs(mT-T124));
 mT_T234=sum(abs(mT-T234));
 
-likelihood_table=[123,mT_T123;134,mT_T134;124,mT_T124;234,mT_T234];
+likelihood_table=[123,mT_T123;...
+        134,mT_T134;...
+        124,mT_T124;...
+        234,mT_T234];
 likelihood_table=sortrows(likelihood_table,2);
 
 error=likelihood_table(1,2);
