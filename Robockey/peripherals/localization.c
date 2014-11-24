@@ -78,21 +78,21 @@ void match_points(uint16_t* constellation, uint16_t ordered_points[][2]) {
   }
   else {
     //TODO: 3 point detection
-    match_three(constellation, ordered_points);
-    /* ordered_points[0][0] = 1023; */
-    /* ordered_points[0][1] = 1023; */
-    /* ordered_points[1][0] = 1023; */
-    /* ordered_points[1][1] = 1023; */
-    /* ordered_points[2][0] = 1023; */
-    /* ordered_points[2][1] = 1023; */
-    /* ordered_points[3][0] = 1023; */
-    /* ordered_points[3][1] = 1023; */
+    //match_three(constellation, ordered_points);
+    ordered_points[0][0] = 1023;
+    ordered_points[0][1] = 1023;
+    ordered_points[1][0] = 1023;
+    ordered_points[1][1] = 1023;
+    ordered_points[2][0] = 1023;
+    ordered_points[2][1] = 1023;
+    ordered_points[3][0] = 1023;
+    ordered_points[3][1] = 1023;
   }
 }
 
 void init_localization_params() {
   /* assign distances from ground data */
-  int i, j, k, iterator = 0;
+  int i, j, iterator = 0;
   for (i = 0; i < 4; i++) {
     for (j = i+1; j < 4; j++) {
       distances[iterator++] = (p_gnd[i][0]-p_gnd[j][0])*(p_gnd[i][0]-p_gnd[j][0])
@@ -124,8 +124,8 @@ void localize(uint16_t ordered_points[][2],
       && ordered_points[3][0] != 1023 && ordered_points[3][1] != 1023) {
     center[0] = (ordered_points[0][0]+ordered_points[3][0])/2.0-512;
     center[1] = (ordered_points[0][1]+ordered_points[3][1])/2.0-384;
-    *orientation = -atan2((float)(ordered_points[3][1]-ordered_points[0][1]),
-			 (float)(ordered_points[3][0]-ordered_points[0][0]))+PI/2;
+    *orientation = -atan2(((float)ordered_points[3][1]-ordered_points[0][1]),
+			 ((float)ordered_points[3][0]-ordered_points[0][0]))+PI/2;
     *height = 0;
   }
   else {
@@ -139,7 +139,7 @@ void localize(uint16_t ordered_points[][2],
 void inverse_kinematics(float* center, float* orientation, float* height,
 			float* x, float* y, float* yaw) {
   float x_const = 750*center[0]*32/1024*PI/180, y_const = 750*center[1]*32/1024*PI/180;
-  *yaw = -(*orientation);
+  *yaw = (*orientation)*-1;
   *x = -cos(*yaw)*x_const - sin(*yaw)*y_const;
   *y = sin(*yaw)*x_const - cos(*yaw)*y_const;
 }
