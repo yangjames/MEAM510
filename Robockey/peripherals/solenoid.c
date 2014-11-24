@@ -1,4 +1,3 @@
-#include "config.h"
 #include "solenoid.h"
 
 volatile uint64_t tim0_ovf;

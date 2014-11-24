@@ -1,4 +1,3 @@
-#include "config.h"
 #include "motor.h"
 
 /* initialize motor drivers */
