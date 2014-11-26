@@ -17,6 +17,7 @@ volatile char state = INITIALIZE;
 volatile char team = N_INIT;
 volatile char go_flag = 0;
 volatile char motor_disable = 0;
+float pos_d[2] = {0.0, 0.0};
 
 /* main function */
 int main(void) {
@@ -46,7 +47,7 @@ int main(void) {
     alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI),
     x_ddot_local, y_ddot_local;
 
-  float pos_d[2] = {-100.0, 0.0};
+
   float yaw_d = 0.0;
   float yaw_err = 0.0;
   float Kp_yaw = 20.0;
@@ -60,6 +61,13 @@ int main(void) {
   /* start motors */
   enable_motors();
 
+  /* while(1) { */
+  /*   if (radio_flag) { */
+  /*     radio_flag = 0; */
+  /*     m_rf_read(radio_buf, PACKET_LENGTH);  */
+  /*     parse_radio_data(); */
+  /*   } */
+  /* } */
   /* main loop */
   while(1) {
     /* check if we got a new packet */
@@ -176,14 +184,8 @@ int main(void) {
 	    pos_d[1] = 0.0;
 	  }
 	  if (team != N_INIT && go_flag) state = GO;
-	  else if (team == N_INIT) state = INITIALIZE;
 	  break;
 	case GO: {
-	  if (team == N_INIT) {
-	    state = INITIALIZE;
-	    break;
-	  }
-	 
 	  /* controls */
 	  yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
 	  yaw_err = yaw_d - yaw;
@@ -308,6 +310,12 @@ void parse_radio_data() {
   case 0xA6: break; // half time
   case 0xA7: break; // game over
   case 0xA8: break; // enemy positions
+  case 0xB0:
+    m_green(TOGGLE);
+    pos_d[0] = (float)(radio_buf[1]*256 + radio_buf[2])/10 - 115.0;
+    pos_d[1] = (float)(radio_buf[3]*256 + radio_buf[4])/10 - 60.0;
+    state = GO;
+    break;
   default: break;
   }
 }
@@ -317,5 +325,6 @@ ISR(TIMER3_OVF_vect) {tim3_ovf++;}
 
 /* read in radio packet */
 ISR(INT2_vect) {
+
   radio_flag = 1;
 }
