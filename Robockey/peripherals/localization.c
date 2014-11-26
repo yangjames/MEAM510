@@ -127,7 +127,7 @@ int localize(uint16_t ordered_points[][2],
     center[0] = (ordered_points[0][0]+ordered_points[3][0])/2.0-512;
     center[1] = (ordered_points[0][1]+ordered_points[3][1])/2.0-384;
     *orientation = -atan2(((float)ordered_points[3][1]-ordered_points[0][1]),
-			 ((float)ordered_points[3][0]-ordered_points[0][0]))+PI/2;
+			  ((float)ordered_points[3][0]-ordered_points[0][0]));
     *height = 0;
     return 1;
   }
@@ -144,7 +144,9 @@ int inverse_kinematics(float* center, float* orientation, float* height,
 			float* x, float* y, float* yaw) {
   float x_const = 750*center[0]*32/1024*PI/180, y_const = 750*center[1]*32/1024*PI/180;
   *yaw = (*orientation)*-1;
-  *x = -cos(*yaw)*x_const - sin(*yaw)*y_const;
-  *y = -sin(*yaw)*x_const + cos(*yaw)*y_const;
+  /* *x = -cos(*yaw)*x_const - sin(*yaw)*y_const; */
+  /* *y = -sin(*yaw)*x_const + cos(*yaw)*y_const; */
+  *x = -sin(*yaw)*x_const + cos(*yaw)*y_const;
+  *y = cos(*yaw)*x_const + sin(*yaw)*y_const;
   return 1;
 }

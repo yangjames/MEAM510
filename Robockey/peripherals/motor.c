@@ -3,7 +3,7 @@
 /* initialize motor drivers */
 void init_motor_drivers() {
   /* set direction out for enable and direction pins */
-  MOTOR_PORT |= ((1 << L_EN) | (1 << R_EN) 
+  MOTOR_DDR_PORT |= ((1 << L_EN) | (1 << R_EN) 
 		 | (1 << L_DIR_1) | (1 << L_DIR_2) 
 		 | (1 << R_DIR_1) | (1 << R_DIR_2));
 
@@ -35,11 +35,11 @@ void set_direction(int motor, int direction) {
   switch (motor) {
   case MOTOR_L: {
     switch (direction) {
-    case CW:
+    case FORWARD:
       MOTOR_PORT |= (1 << L_DIR_1);
       MOTOR_PORT &= ~(1 << L_DIR_2);
       break;
-    case CCW:
+    case BACKWARD:
       MOTOR_PORT |= (1 << L_DIR_2);
       MOTOR_PORT &= ~(1 << L_DIR_1);
       break;
@@ -52,11 +52,11 @@ void set_direction(int motor, int direction) {
   }
   case MOTOR_R: {
    switch (direction) {
-    case CW:
+    case FORWARD:
       MOTOR_PORT |= (1 << R_DIR_1);
       MOTOR_PORT &= ~(1 << R_DIR_2);
       break;
-    case CCW:
+    case BACKWARD:
       MOTOR_PORT |= (1 << R_DIR_2);
       MOTOR_PORT &= ~(1 << R_DIR_1);
       break;

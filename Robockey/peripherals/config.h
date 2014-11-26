@@ -9,7 +9,8 @@
 #define GYRO_SCALE (125*PI/180/16384)
 
 /* motor pins and definitions */
-#define MOTOR_PORT DDRB
+#define MOTOR_DDR_PORT DDRB
+#define MOTOR_PORT PORTB
 #define L_EN 6
 #define R_EN 7
 #define L_DIR_1 0
@@ -23,8 +24,8 @@ enum {
 };
 
 enum {
-  CW = 1,
-  CCW,
+  FORWARD = 1,
+  BACKWARD,
   BRAKE
 };
 
