@@ -24,24 +24,33 @@ int main(void) {
   uint16_t constellation[12];
   uint16_t ordered_points[4][2];
   float center[2], height, orientation, 
-    x_const = 0.0, y_const = 0.0, yaw_const = 0.0,
-    x_const_filtered = 0.0, y_const_filtered = 0.0, yaw_const_filtered = 0.0;
+    x_const_raw = 0.0, y_const_raw = 0.0,
+    x_const = 0.0, x_const_dot = 0.0, x_const_ddot = 0.0,
+    y_const = 0.0, y_const_dot = 0.0, y_const_ddot = 0.0,
+    yaw_const = 0.0;
   int update = 0;
 
   /* controls and filtering variables */
   float dt = 0.0;
   int imu[9];
-  float x_ddot = 0.0, x_dot = 0.0, x = 0.0, x_ddot_prev = 0.0,
-    y_ddot = 0.0, y_dot = 0.0, y = 0.0, y_ddot_prev = 0.0,
-    yaw = 0.0, yaw_dot = 0.0, prev_yaw_dot = 0.0,
-    alpha_lp, cutoff_low = 3.0, RC_low = 1/(cutoff_low*2*PI),
-    alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI);
+  float x_ddot = 0.0, x_ddot_prev = 0.0, x_dot = 0.0, x_dot_prev = 0.0, x = 0.0, x_prev = 0.0, // x variables
+    y_ddot = 0.0, y_ddot_prev = 0.0, y_dot = 0.0, y_dot_prev = 0.0, y = 0.0, y_prev = 0.0, // y variables
+    yaw = 0.0, yaw_dot = 0.0, prev_yaw_dot = 0.0, // yaw variables
+    pitch = 0.0, pitch_dot = 0.0, prev_pitch_dot = 0.0, // pitch variables
+    roll = 0.0, roll_dot = 0.0, prev_roll_dot = 0.0, // roll variables
+    alpha_lp, cutoff_low = 3.0, RC_low = 1/(cutoff_low*2*PI), // low-pass filter variables
+    alpha_hp_acc, cutoff_high_acc = 0.00001, RC_high_acc = 1/(cutoff_high_acc*2*PI),
+    alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI); 
+
+  /* sensor fusion variables */
+  float alpha_x = 0.99, alpha_xdot = 0.8, alpha_xddot = 0.01;
+  float alpha_y = 0.99, alpha_ydot = 0.8, alpha_yddot = 0.01;
 
   /* start motors */
-  set_direction(MOTOR_L, CW);
-  set_duty_cycle(MOTOR_L, 0.5);
-  set_direction(MOTOR_R, CCW);
-  set_duty_cycle(MOTOR_R, 0.3);
+  set_direction(MOTOR_L, FORWARD);
+  set_duty_cycle(MOTOR_L, 1.0);
+  set_direction(MOTOR_R, FORWARD);
+  set_duty_cycle(MOTOR_R, 1.0);
   enable_motors();
 
   /* main loop */
@@ -62,66 +71,38 @@ int main(void) {
     m_wii_read(constellation);
     if (match_points(constellation, ordered_points))
       if (localize(ordered_points, center, &orientation, &height))
-	update = inverse_kinematics(center, &orientation, &height, &x_const, &y_const, &yaw_const);
-    
+	update = inverse_kinematics(center, &orientation, &height, &x_const_raw, &y_const_raw, &yaw_const);
+
+    /* received good constellation data */
     if (update) {
-      y_const_filtered = y_const*(alpha_lp) + (1-alpha_lp)*y_const_filtered;
-      x_const_filtered = x_const*(alpha_lp) + (1-alpha_lp)*x_const_filtered;
-      yaw_const_filtered = yaw_const*(alpha_lp) + (1-alpha_lp)*yaw_const_filtered;
+      /* filter the x and y coordinate values */
+      y_const = y_const_raw*(alpha_lp) + (1-alpha_lp)*y_const;
+      x_const = x_const_raw*(alpha_lp) + (1-alpha_lp)*x_const;
+      
+      y_const_dot = (y_const-y)/dt;
+      x_const_dot = (x_const-x)/dt;
+ 
+      y_const_ddot = (y_const_dot - y_dot)/dt;
+      x_const_ddot = (x_const_dot - x_dot)/dt;
+      
+      /* debug prints */
       /* m_usb_tx_int((int)center[0]); */
       /* m_usb_tx_string(","); */
       /* m_usb_tx_int((int)center[1]); */
       /* m_usb_tx_string(","); */
-      m_usb_tx_int((int)x_const_filtered);
-      m_usb_tx_string(",");
-      m_usb_tx_int((int)y_const_filtered);
-      m_usb_tx_string(",");
-      m_usb_tx_int((int)(yaw_const_filtered*180/PI));
-      m_usb_tx_string("\n");
-      update = 0;
+      /* m_usb_tx_int((int)x_const_filtered); */
+      /* m_usb_tx_string(","); */
+      /* m_usb_tx_int((int)y_const_filtered); */
+      /* m_usb_tx_string(","); */
+      /* m_usb_tx_int((int)(yaw_const*180/PI)); */
+      /* m_usb_tx_string("\n"); */
     }
-    /* m_usb_tx_int(constellation[0]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[1]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[3]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[4]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[6]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[7]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[9]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(constellation[10]); */
-    /* m_usb_tx_string(","); */
-
-    /* m_usb_tx_int(ordered_points[0][0]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[0][1]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[1][0]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[1][1]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[2][0]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[2][1]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[3][0]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int(ordered_points[3][1]); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int((int)x_const); */
-    /* m_usb_tx_string(","); */
-    /* m_usb_tx_int((int)y_const); */
-    /* m_usb_tx_string(","); */
 
     /* process IMU data */
     if (m_imu_raw(imu)) {
-      //alpha_lp = dt/(dt+RC_low);
+      /* propagate */
       alpha_hp = RC_high/(dt+RC_high);
+      alpha_hp_acc = RC_high_acc/(dt+RC_high_acc);
       yaw_dot = yaw_dot*alpha_hp + (imu[5]*GYRO_SCALE - prev_yaw_dot)*alpha_hp;
       yaw += dt*yaw_dot;
       if (yaw > PI)
@@ -130,18 +111,51 @@ int main(void) {
 	yaw += 2*PI;
       prev_yaw_dot = imu[5]*GYRO_SCALE;
 
-      //x_ddot = x_ddot*(1-alpha_lp) + alpha_lp*(ACC_SCALE*imu[0]*sin(yaw) + ACC_SCALE*imu[1]*cos(yaw));
-      //y_ddot = y_ddot*(1-alpha_lp)+alpha_lp*(-ACC_SCALE*imu[0]*cos(yaw) + ACC_SCALE*imu[1]*sin(yaw));
-      x_ddot = x_ddot*alpha_hp + (-ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw) - x_ddot_prev)*alpha_hp;
-      x_ddot_prev = -ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw);
-      x_dot += x_ddot*dt;
-      x += x_dot*dt;
+      x_ddot = x_ddot*alpha_hp_acc + (-ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw) - x_ddot_prev)*alpha_hp_acc;
+      x_dot = x_ddot*dt + x_dot_prev;
+      x = 1/2*dt*dt*x_ddot_prev + x_dot_prev*dt +x_prev;
 
-      y_ddot = y_ddot*alpha_hp + (ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw) - y_ddot_prev)*alpha_hp;
+      x_ddot_prev = -ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw);
+      x_dot_prev = x_dot;
+      x_prev = x;
+
+      y_ddot = y_ddot*alpha_hp_acc + (ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw) - y_ddot_prev)*alpha_hp_acc;
+      y_dot = y_ddot*dt + y_dot_prev;
+      y = 1/2*dt*dt*y_ddot_prev + y_dot_prev*dt + y_prev;
+
       y_ddot_prev = ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw);
-      y_dot += y_ddot*dt;
-      y += y_dot*dt;
+      y_dot_prev = y_dot;
+      y_prev = y;
+
+      /* m_usb_tx_string("x(cm): "); */
+      /* m_usb_tx_int((int)(x*100)); */
+      /* m_usb_tx_string(" y(cm): "); */
+      /* m_usb_tx_int((int)(y*100)); */
+      /* m_usb_tx_string(" xdot(cm/s): "); */
+      /* m_usb_tx_int((int)(x_dot*100)); */
+      /* m_usb_tx_string(" ydot(cm/s): "); */
+      /* m_usb_tx_int((int)(y_dot*100)); */
+      /* m_usb_tx_string(" xddot(cm/s2): "); */
+      /* m_usb_tx_int((int)(x_ddot*100)); */
+      /* m_usb_tx_string(" yddot(cm/s2): "); */
+      /* m_usb_tx_int((int)(y_ddot*100)); */
+      /* m_usb_tx_string("\n"); */
+      
+
+      /* update */
+      if (update) {
+	x = x_const*alpha_x + x*(1-alpha_x);
+	y = y_const*alpha_y + y*(1-alpha_y);
+	x_dot = x_const_dot*alpha_xdot + x_dot*(1-alpha_xdot);
+	y_dot = y_const_dot*alpha_ydot + y_dot*(1-alpha_ydot);
+	x_ddot = x_const_ddot*alpha_xddot + x_ddot*(1-alpha_xddot);
+	y_ddot = y_const_ddot*alpha_yddot + y_ddot*(1-alpha_yddot);
+	yaw = yaw_const*0.6 + yaw*0.4;
+      }
     }
+
+    /* reset constellation update flag */
+    update = 0;
   }
 
   return 0;
@@ -159,13 +173,16 @@ void init() {
   /* initialize fiene code */
   m_usb_init();
   m_bus_init();
-  while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
+  while(!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
+  //while(1) m_usb_tx_string("helloworld\n\r");
   m_wii_open();
   m_imu_init(0,0);
+  m_red(ON);
 
   /* initialize drivers */
   init_motor_drivers();
   init_solenoid();
+  m_green(ON);
 
   /* intialize system timer */
   TCCR3A = 0x00; // normal compare output mode operation
