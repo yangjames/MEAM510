@@ -47,7 +47,8 @@ enum {
 /* state machine */
 typedef enum {
   INITIALIZE = 1,
-  GO
+  GO,
+  STOP
 };
 
 typedef enum {

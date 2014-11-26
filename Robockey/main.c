@@ -15,7 +15,8 @@ volatile char radio_flag;
 volatile uint64_t tim3_ovf;
 volatile char state = INITIALIZE;
 volatile char team = N_INIT;
-
+volatile char go_flag = 0;
+volatile char motor_disable = 0;
 
 /* main function */
 int main(void) {
@@ -51,8 +52,6 @@ int main(void) {
   float Kp_yaw = 20.0;
   float l_duty = 0.0;
   float r_duty = 0.0;
-  char motor_disable = 0;
-
 
   /* sensor fusion variables */
   float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
@@ -61,12 +60,6 @@ int main(void) {
   /* start motors */
   enable_motors();
 
-  /* while(1) { */
-  /*   if (radio_flag) { */
-  /*     radio_flag = 0; */
-  /*     parse_radio_data(); */
-  /*   } */
-  /* } */
   /* main loop */
   while(1) {
     /* check if we got a new packet */
@@ -169,32 +162,28 @@ int main(void) {
 	else
 	  yaw = yaw_const;
 
+	/* state machine */
 	switch (state) {
 	case INITIALIZE:
 	  if (x > 0 && team == N_INIT) {
 	    team = RED;
-	    //state = GO;
+	    pos_d[0] = -100.0;
+	    pos_d[1] = 0.0;
 	  }
-	  else if (x < 0 && team == N_INIT) {
+	  if (x < 0 && team == N_INIT) {
 	    team = BLUE;
-	    //state = GO;
+	    pos_d[0] = 100.0;
+	    pos_d[1] = 0.0;
 	  }
-	  else if (team == N_INIT)
-	    state = INITIALIZE;
+	  if (team != N_INIT && go_flag) state = GO;
+	  else if (team == N_INIT) state = INITIALIZE;
 	  break;
-	case GO:
-	  if (team == RED) {
-	    pos_d[0] = 0.0;
-	    pos_d[1] = 0.0;
-	  }
-	  else if (team == BLUE) {
-	    pos_d[0] = 0.0;
-	    pos_d[1] = 0.0;
-	  }
-	  else {
+	case GO: {
+	  if (team == N_INIT) {
 	    state = INITIALIZE;
 	    break;
 	  }
+	 
 	  /* controls */
 	  yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
 	  yaw_err = yaw_d - yaw;
@@ -231,13 +220,30 @@ int main(void) {
 	    set_duty_cycle(MOTOR_R, 1.0);
 	  }
 	  if (fabs(pos_d[0] - x) < 5.0 && fabs(pos_d[1] - y) < 5.0) {
+	    state = STOP;
 	    motor_disable = 1;
 	    m_green(OFF);
+	    set_direction(MOTOR_L, BRAKE);
+	    set_direction(MOTOR_R, BRAKE);
 	    set_duty_cycle(MOTOR_L, 0.0);
 	    set_duty_cycle(MOTOR_R, 0.0);
-	    disable_motors();
+	    //disable_motors();
 	  }
 	  break;
+	}
+	case STOP: {
+	  motor_disable = 1;
+	  m_green(OFF);
+	  set_direction(MOTOR_L, BRAKE);
+	  set_direction(MOTOR_R, BRAKE);
+	  set_duty_cycle(MOTOR_L, 0.0);
+	  set_duty_cycle(MOTOR_R, 0.0);
+	  go_flag = 0;
+	  motor_disable = 0;
+	  team = N_INIT;
+	  state = INITIALIZE;
+	  //disable_motors();
+	}
 	default:
 	  break;
 	}
@@ -286,12 +292,13 @@ void init() {
 
 void parse_radio_data() {
   switch(radio_buf[0]) {
-  case 0xA0: break; // test
+  case 0xA0: m_green(TOGGLE) break; // test
   case 0xA1: {
-    if (team == RED || team == BLUE) {
+    if (team != N_INIT) {
       m_green(TOGGLE);
       state = GO;
     }
+    go_flag = 1;
     break; // play
   }
   case 0xA2: break; // goal R

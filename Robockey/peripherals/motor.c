@@ -75,7 +75,6 @@ void set_direction(int motor, int direction) {
 void disable_motors() {
   MOTOR_PORT &= ~((1 << L_EN) | (1 << R_EN));
   TCCR1B &= ~(1 << CS10);
-  MOTOR_PORT &= ~((1 << L_EN) | (1 << R_EN));
 }
 
 /* enable motors */
