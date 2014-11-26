@@ -43,16 +43,21 @@ int main(void) {
     alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI),
     x_ddot_local, y_ddot_local;
 
+  float pos_d[2] = {0.0, 0.0};
+  float yaw_d = 0.0;
+  float yaw_err = 0.0;
+  float Kp_yaw = 8.0;
+
   /* sensor fusion variables */
-  float alpha_x = 0.99, alpha_xdot = 0.99, alpha_xddot = 0.99;
-  float alpha_y = 0.99, alpha_ydot = 0.99, alpha_yddot = 0.99;
+  float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
+  float alpha_y = 0.999, alpha_ydot = 0.999, alpha_yddot = 0.999;
 
   /* start motors */
   set_direction(MOTOR_L, FORWARD);
   set_duty_cycle(MOTOR_L, 1.0);
   set_direction(MOTOR_R, FORWARD);
   set_duty_cycle(MOTOR_R, 1.0);
-  enable_motors();
+  //enable_motors();
 
   /* main loop */
   while(1) {
@@ -85,22 +90,6 @@ int main(void) {
  
       y_const_ddot = (y_const_dot - y_dot)/dt;
       x_const_ddot = (x_const_dot - x_dot)/dt;
-      
-      /* debug prints */
-      /* m_usb_tx_int((int)x_const); */
-      /* m_usb_tx_string(","); */
-      /* m_usb_tx_int((int)y_const); */
-      /* m_usb_tx_string(","); */
-      /* m_usb_tx_int((int)x_const_dot); */
-      /* m_usb_tx_string(","); */
-      /* m_usb_tx_int((int)y_const_dot); */
-      /* m_usb_tx_string(","); */
-      /* m_usb_tx_int((int)x_const_ddot); */
-      /* m_usb_tx_string(","); */
-      /* m_usb_tx_int((int)y_const_ddot); */
-      /* m_usb_tx_string(","); */
-      /* m_usb_tx_int((int)(yaw_const*180/PI)); */
-      /* m_usb_tx_string("\n"); */
     }
 
     /* process IMU data */
@@ -159,39 +148,70 @@ int main(void) {
 
 
       /* update */
-      //if (0) {
       if (update) {
-	x = x_const*alpha_x + x*(1-alpha_x);
-	y = y_const*alpha_y + y*(1-alpha_y);
-	x_dot = x_const_dot*alpha_xdot + x_dot*(1-alpha_xdot);
-	y_dot = y_const_dot*alpha_ydot + y_dot*(1-alpha_ydot);
-	x_ddot = x_const_ddot*alpha_xddot + x_ddot*(1-alpha_xddot);
-	y_ddot = y_const_ddot*alpha_yddot + y_ddot*(1-alpha_yddot);
+	/* x = x_const*alpha_x + x*(1-alpha_x); */
+	/* y = y_const*alpha_y + y*(1-alpha_y); */
+	/* x_dot = x_const_dot*alpha_xdot + x_dot*(1-alpha_xdot); */
+	/* y_dot = y_const_dot*alpha_ydot + y_dot*(1-alpha_ydot); */
+	/* x_ddot = x_const_ddot*alpha_xddot + x_ddot*(1-alpha_xddot); */
+	/* y_ddot = y_const_ddot*alpha_yddot + y_ddot*(1-alpha_yddot); */
+	x = x_const;
+	y = y_const;
+	x_dot = x_const_dot;
+	y_dot = y_const_dot;
+	x_ddot = x_const_ddot;
+	y_ddot = y_const_ddot;
 	if (yaw_const*180/PI < 178 && yaw_const*180/PI > -178)
 	  yaw = yaw_const*0.01 + yaw*0.99;
 	else
 	  yaw = yaw_const;
+
+
+	/* controls */
+	yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
+	yaw_err = yaw_d - yaw;
+	yaw_err = yaw_err > PI ? yaw_err - 2*PI : (yaw_err < -PI ? yaw_err+2*PI : yaw_err);
+
+	if (yaw_err < -PI/4) {
+	  set_direction(MOTOR_L, FORWARD);
+	  set_direction(MOTOR_R, BACKWARD);
+	  set_duty_cycle(MOTOR_L, 1.0);
+	  set_duty_cycle(MOTOR_R, 1.0);
+	}
+	else if (yaw_err > PI/4) {
+	  set_direction(MOTOR_L, BACKWARD);
+	  set_direction(MOTOR_R, FORWARD);
+	  set_duty_cycle(MOTOR_L, 1.0);
+	  set_duty_cycle(MOTOR_R, 1.0);
+	}
+	else if (yaw_err < 0.0) {
+	  set_direction(MOTOR_L, FORWARD);
+	  set_direction(MOTOR_R, FORWARD);
+	  //set_duty_cycle(MOTOR_L, 1.0);
+	  //set_duty_cycle(MOTOR_R, 1.0-abs(yaw_err)/(2*PI)*Kp_yaw);
+	  disable_motors();
+	}
+	else if (yaw_err > 0.0) {
+	  set_direction(MOTOR_L, FORWARD);
+	  set_direction(MOTOR_L, FORWARD);
+	  //set_duty_cycle(MOTOR_L, 1.0-abs(yaw_err)/(2*PI)*Kp_yaw);
+	  //set_duty_cycle(MOTOR_R, 1.0);
+	  disable_motors();
+	}
+	if (pos_d[0] - x < 5.0 && pos_d[1] - y < 5.0)
+	  disable_motors();
+	/* m_usb_tx_string("dx:\t"); */
+	/* m_usb_tx_int((int)(pos_d[0]-x)); */
+	/* m_usb_tx_string("\tdy:\t"); */
+	/* m_usb_tx_int((int)(pos_d[1]-y)); */
+	/* m_usb_tx_string("\tdesired yaw:\t"); */
+	/* m_usb_tx_int((int)(yaw_d*180/PI)); */
+	/* m_usb_tx_string("\tactual yaw:\t"); */
+	/* m_usb_tx_int((int)(yaw*180/PI)); */
+	/* m_usb_tx_string("\tyaw error:\t"); */
+	/* m_usb_tx_int((int)(yaw_err*180/PI)); */
+	/* m_usb_tx_string("\n"); */
       }
-
-      /* m_usb_tx_string("x(cm): "); */
-      /* m_usb_tx_int((int)(x)); */
-      /* m_usb_tx_string(" y(cm): "); */
-      /* m_usb_tx_int((int)(y)); */
-      /* m_usb_tx_string(" xdot(cm/s): "); */
-      /* m_usb_tx_int((int)(x_dot)); */
-      /* m_usb_tx_string(" ydot(cm/s): "); */
-      /* m_usb_tx_int((int)(y_dot)); */
-      /* m_usb_tx_string(" xddot(cm/s2): "); */
-      /* m_usb_tx_int((int)(x_ddot)); */
-      /* m_usb_tx_string(" yddot(cm/s2): "); */
-      /* m_usb_tx_int((int)(y_ddot)); */
-      /* m_usb_tx_string(" yaw(deg): "); */
-      /* m_usb_tx_int((int)(yaw_const*180/PI)); */
-      /* m_usb_tx_string(" ");; */
-      m_usb_tx_int((int)(yaw*180/PI));
-      m_usb_tx_string("\n");
-
-
     }
 
     /* reset constellation update flag */

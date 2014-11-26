@@ -72,7 +72,17 @@ void set_direction(int motor, int direction) {
 }
 
 /* disable motors */
-void disable_motors() { TCCR1B &= ~(1 << CS10); }
+void disable_motors() {
+  //set_duty_cycle(MOTOR_L, 0.0);
+  //set_duty_cycle(MOTOR_R, 0.0);
+  MOTOR_PORT &= ~((1 << L_EN) | (1 << R_EN));
+  TCCR1B &= ~(1 << CS10);
+}
 
 /* enable motors */
-void enable_motors() { TCCR1B |= (1 << CS10); }
+void enable_motors() { 
+  //set_duty_cycle(MOTOR_L, 0.0);
+  //set_duty_cycle(MOTOR_R, 0.0);
+  MOTOR_PORT &= ~((1 << L_EN) | (1 << R_EN));
+  TCCR1B |= (1 << CS10);
+}
