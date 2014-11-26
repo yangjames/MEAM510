@@ -40,7 +40,8 @@ int main(void) {
     roll = 0.0, roll_dot = 0.0, prev_roll_dot = 0.0, // roll variables
     alpha_lp, cutoff_low = 3.0, RC_low = 1/(cutoff_low*2*PI), // low-pass filter variables
     alpha_hp_acc, cutoff_high_acc = 0.00001, RC_high_acc = 1/(cutoff_high_acc*2*PI),
-    alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI); 
+    alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI),
+    x_ddot_local, y_ddot_local;
 
   /* sensor fusion variables */
   float alpha_x = 0.99, alpha_xdot = 0.8, alpha_xddot = 0.01;
@@ -101,16 +102,41 @@ int main(void) {
     /* process IMU data */
     if (m_imu_raw(imu)) {
       /* propagate */
-      alpha_hp = RC_high/(dt+RC_high);
-      alpha_hp_acc = RC_high_acc/(dt+RC_high_acc);
+      alpha_hp = RC_high/(dt+RC_high); // high pass gain
+      alpha_hp_acc = RC_high_acc/(dt+RC_high_acc); // accelrometer high pass gain
+
+      /* calculate yaw */
       yaw_dot = yaw_dot*alpha_hp + (imu[5]*GYRO_SCALE - prev_yaw_dot)*alpha_hp;
-      yaw += dt*yaw_dot;
+      yaw += dt*yaw_dot; // yaw angle
       if (yaw > PI)
 	yaw -= 2*PI;
       if (yaw <= -PI)
 	yaw += 2*PI;
       prev_yaw_dot = imu[5]*GYRO_SCALE;
+      
+      /* calculate pitch */
+      pitch_dot = pitch_dot*alpha_hp + (imu[4]*GYRO_SCALE - prev_pitch_dot)*alpha_hp;
+      pitch += dt*pitch_dot;
+      if (pitch > PI)
+	pitch -= 2*PI;
+      if (pitch <= -PI)
+	pitch += 2*PI;
+      prev_pitch_dot = imu[4]*GYRO_SCALE;
+      if (fabs(imu[0]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) > -2*g && fabs(imu[0]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) < 2*g)
+	pitch = pitch*0.99 - atan2f(imu[0]*ACC_SCALE,imu[2]*ACC_SCALE)*0.01;
+      
+      /* calculate roll */
+      roll_dot = roll_dot*alpha_hp + (-imu[3]*GYRO_SCALE - prev_roll_dot)*alpha_hp;
+      roll += dt*roll_dot;
+      if (roll > PI)
+	roll -= 2*PI;
+      if (roll <= -PI)
+	roll += 2*PI;
+      prev_roll_dot = -imu[3]*GYRO_SCALE;
+      if (fabs(imu[1]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) > -2*g && fabs(imu[1]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) < 2*g)
+	roll = roll*0.99 - atan2f(imu[1]*ACC_SCALE,imu[2]*ACC_SCALE)*0.01;
 
+      /* calculate local position */
       x_ddot = x_ddot*alpha_hp_acc + (-ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw) - x_ddot_prev)*alpha_hp_acc;
       x_dot = x_ddot*dt + x_dot_prev;
       x = 1/2*dt*dt*x_ddot_prev + x_dot_prev*dt +x_prev;
@@ -127,6 +153,13 @@ int main(void) {
       y_dot_prev = y_dot;
       y_prev = y;
 
+      m_usb_tx_int((int)(pitch*180/PI));
+      //m_usb_tx_int(imu[1]);
+      m_usb_tx_string(" ");
+      m_usb_tx_int((int)(roll*180/PI));
+      m_usb_tx_string(" ");
+      m_usb_tx_int(imu[2]);
+      m_usb_tx_string("\n");
       /* m_usb_tx_string("x(cm): "); */
       /* m_usb_tx_int((int)(x*100)); */
       /* m_usb_tx_string(" y(cm): "); */
