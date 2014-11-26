@@ -26,6 +26,8 @@ precomp:
 .c.s:
 	$(COMPILE) -S $< -o $@ $(LIBS) $(INCS)
 
+flashyflash: flash
+
 install: flash
 
 flash: all
