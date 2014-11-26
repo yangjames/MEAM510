@@ -13,6 +13,8 @@ void parse_radio_data();
 uint8_t radio_buf[PACKET_LENGTH];
 volatile char radio_flag;
 volatile uint64_t tim3_ovf;
+volatile char state = INITIALIZE;
+volatile char team = N_INIT;
 
 
 /* main function */
@@ -51,9 +53,6 @@ int main(void) {
   float r_duty = 0.0;
   char motor_disable = 0;
 
-  /* state machine */
-  char state = INITIALIZE;
-  char team = 0;
 
   /* sensor fusion variables */
   float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
@@ -62,12 +61,18 @@ int main(void) {
   /* start motors */
   enable_motors();
 
-  //while(1);
+  /* while(1) { */
+  /*   if (radio_flag) { */
+  /*     radio_flag = 0; */
+  /*     parse_radio_data(); */
+  /*   } */
+  /* } */
   /* main loop */
   while(1) {
     /* check if we got a new packet */
     if (radio_flag) {
       radio_flag = 0;
+      m_rf_read(radio_buf, PACKET_LENGTH); 
       parse_radio_data();
     }
 
@@ -153,12 +158,6 @@ int main(void) {
       /* update */
       if (update) {
 	m_red(ON);
-	/* x = x_const*alpha_x + x*(1-alpha_x); */
-	/* y = y_const*alpha_y + y*(1-alpha_y); */
-	/* x_dot = x_const_dot*alpha_xdot + x_dot*(1-alpha_xdot); */
-	/* y_dot = y_const_dot*alpha_ydot + y_dot*(1-alpha_ydot); */
-	/* x_ddot = x_const_ddot*alpha_xddot + x_ddot*(1-alpha_xddot); */
-	/* y_ddot = y_const_ddot*alpha_yddot + y_ddot*(1-alpha_yddot); */
 	x = x_const;
 	y = y_const;
 	x_dot = x_const_dot;
@@ -172,24 +171,24 @@ int main(void) {
 
 	switch (state) {
 	case INITIALIZE:
-	  if (x > 0) {
+	  if (x > 0 && team == N_INIT) {
 	    team = RED;
-	    state = GO;
+	    //state = GO;
 	  }
-	  else if (x < 0) {
+	  else if (x < 0 && team == N_INIT) {
 	    team = BLUE;
-	    state = GO;
+	    //state = GO;
 	  }
-	  else
+	  else if (team == N_INIT)
 	    state = INITIALIZE;
 	  break;
 	case GO:
 	  if (team == RED) {
-	    pos_d[0] = -100.0;
+	    pos_d[0] = 0.0;
 	    pos_d[1] = 0.0;
 	  }
 	  else if (team == BLUE) {
-	    pos_d[0] = 100.0;
+	    pos_d[0] = 0.0;
 	    pos_d[1] = 0.0;
 	  }
 	  else {
@@ -266,10 +265,9 @@ void init() {
   /* initialize fiene code */
   m_usb_init();
   m_bus_init();
+  while(!m_wii_open());
+  while(!m_imu_init(0,0));
   while(!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
-  //while(1) m_usb_tx_string("helloworld\n\r");
-  m_wii_open();
-  m_imu_init(0,0);
   m_red(ON);
 
   /* initialize drivers */
@@ -289,9 +287,13 @@ void init() {
 void parse_radio_data() {
   switch(radio_buf[0]) {
   case 0xA0: break; // test
-  case 0xA1: 
-    
+  case 0xA1: {
+    if (team == RED || team == BLUE) {
+      m_green(TOGGLE);
+      state = GO;
+    }
     break; // play
+  }
   case 0xA2: break; // goal R
   case 0xA3: break; // goal B
   case 0xA4: break; // pause
@@ -308,6 +310,5 @@ ISR(TIMER3_OVF_vect) {tim3_ovf++;}
 
 /* read in radio packet */
 ISR(INT2_vect) {
-  m_rf_read(radio_buf, PACKET_LENGTH); 
   radio_flag = 1;
 }

@@ -52,5 +52,6 @@ typedef enum {
 
 typedef enum {
   RED = 1,
-  BLUE
+  BLUE,
+  N_INIT
 };
