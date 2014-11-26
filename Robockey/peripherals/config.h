@@ -43,3 +43,14 @@ enum {
 #define ADDRESS 0x04
 #define CHANNEL 0x01
 #define PACKET_LENGTH 10
+
+/* state machine */
+typedef enum {
+  INITIALIZE = 1,
+  GO
+};
+
+typedef enum {
+  RED = 1,
+  BLUE
+};

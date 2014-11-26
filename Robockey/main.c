@@ -51,6 +51,10 @@ int main(void) {
   float r_duty = 0.0;
   char motor_disable = 0;
 
+  /* state machine */
+  char state = INITIALIZE;
+  char team = 0;
+
   /* sensor fusion variables */
   float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
   float alpha_y = 0.999, alpha_ydot = 0.999, alpha_yddot = 0.999;
@@ -166,61 +170,78 @@ int main(void) {
 	else
 	  yaw = yaw_const;
 
+	switch (state) {
+	case INITIALIZE:
+	  if (x > 0) {
+	    team = RED;
+	    state = GO;
+	  }
+	  else if (x < 0) {
+	    team = BLUE;
+	    state = GO;
+	  }
+	  else
+	    state = INITIALIZE;
+	  break;
+	case GO:
+	  if (team == RED) {
+	    pos_d[0] = -100.0;
+	    pos_d[1] = 0.0;
+	  }
+	  else if (team == BLUE) {
+	    pos_d[0] = 100.0;
+	    pos_d[1] = 0.0;
+	  }
+	  else {
+	    state = INITIALIZE;
+	    break;
+	  }
+	  /* controls */
+	  yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
+	  yaw_err = yaw_d - yaw;
+	  yaw_err = yaw_err > PI ? yaw_err - 2*PI : (yaw_err < -PI ? yaw_err+2*PI : yaw_err);
 
-	/* controls */
-	yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
-	yaw_err = yaw_d - yaw;
-	yaw_err = yaw_err > PI ? yaw_err - 2*PI : (yaw_err < -PI ? yaw_err+2*PI : yaw_err);
-
-	if (yaw_err < -PI/4 && !motor_disable) {
-	  set_direction(MOTOR_L, FORWARD);
-	  set_direction(MOTOR_R, BACKWARD);
-	  set_duty_cycle(MOTOR_L, 1.0);
-	  set_duty_cycle(MOTOR_R, 1.0);
+	  if (yaw_err < -PI/4 && !motor_disable) {
+	    set_direction(MOTOR_L, FORWARD);
+	    set_direction(MOTOR_R, BACKWARD);
+	    set_duty_cycle(MOTOR_L, 1.0);
+	    set_duty_cycle(MOTOR_R, 1.0);
+	  }
+	  else if (yaw_err > PI/4 && !motor_disable) {
+	    set_direction(MOTOR_L, BACKWARD);
+	    set_direction(MOTOR_R, FORWARD);
+	    set_duty_cycle(MOTOR_L, 1.0);
+	    set_duty_cycle(MOTOR_R, 1.0);
+	  }
+	  else if (yaw_err < 0.0 && !motor_disable) {
+	    set_direction(MOTOR_L, FORWARD);
+	    set_direction(MOTOR_R, FORWARD);
+	    set_duty_cycle(MOTOR_L, 1.0);
+	    r_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
+	    if (r_duty > 1.0)
+	      r_duty = 1.0;
+	    set_duty_cycle(MOTOR_R, 1.0-r_duty);
+	  }
+	  else if (yaw_err > 0.0 && !motor_disable) {
+	    set_direction(MOTOR_L, FORWARD);
+	    set_direction(MOTOR_L, FORWARD);
+	    l_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
+	    if (l_duty > 1.0)
+	      l_duty = 1.0;
+	    set_duty_cycle(MOTOR_L, 1.0-l_duty);
+	    set_duty_cycle(MOTOR_R, 1.0);
+	  }
+	  if (fabs(pos_d[0] - x) < 5.0 && fabs(pos_d[1] - y) < 5.0) {
+	    motor_disable = 1;
+	    m_green(OFF);
+	    set_duty_cycle(MOTOR_L, 0.0);
+	    set_duty_cycle(MOTOR_R, 0.0);
+	    disable_motors();
+	  }
+	  break;
+	default:
+	  break;
 	}
-	else if (yaw_err > PI/4 && !motor_disable) {
-	  set_direction(MOTOR_L, BACKWARD);
-	  set_direction(MOTOR_R, FORWARD);
-	  set_duty_cycle(MOTOR_L, 1.0);
-	  set_duty_cycle(MOTOR_R, 1.0);
-	}
-	else if (yaw_err < 0.0 && !motor_disable) {
-	  set_direction(MOTOR_L, FORWARD);
-	  set_direction(MOTOR_R, FORWARD);
-	  set_duty_cycle(MOTOR_L, 1.0);
-	  r_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
-	  if (r_duty > 1.0)
-	    r_duty = 1.0;
-	  set_duty_cycle(MOTOR_R, 1.0-r_duty);
-	}
-	else if (yaw_err > 0.0 && !motor_disable) {
-	  set_direction(MOTOR_L, FORWARD);
-	  set_direction(MOTOR_L, FORWARD);
-	  l_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
-	  if (l_duty > 1.0)
-	    l_duty = 1.0;
-	  set_duty_cycle(MOTOR_L, 1.0-l_duty);
-	  set_duty_cycle(MOTOR_R, 1.0);
-	}
-	if (fabs(pos_d[0] - x) < 5.0 && fabs(pos_d[1] - y) < 5.0) {
-	  motor_disable = 1;
-	  m_green(OFF);
-	  set_duty_cycle(MOTOR_L, 0.0);
-	  set_duty_cycle(MOTOR_R, 0.0);
-	  disable_motors();
-	}
-
-	/* m_usb_tx_string("dx:\t"); */
-	/* m_usb_tx_int((int)(pos_d[0]-x)); */
-	/* m_usb_tx_string("\tdy:\t"); */
-	/* m_usb_tx_int((int)(pos_d[1]-y)); */
-	/* m_usb_tx_string("\tdesired yaw:\t"); */
-	/* m_usb_tx_int((int)(yaw_d*180/PI)); */
-	/* m_usb_tx_string("\tactual yaw:\t"); */
-	/* m_usb_tx_int((int)(yaw*180/PI)); */
-	/* m_usb_tx_string("\tyaw error:\t"); */
-	/* m_usb_tx_int((int)(yaw_err*180/PI)); */
-	//m_usb_tx_string("\n");
       }
       else {
 	m_red(OFF);
@@ -268,8 +289,10 @@ void init() {
 void parse_radio_data() {
   switch(radio_buf[0]) {
   case 0xA0: break; // test
-  case 0xA1: m_red(ON); break; // play
-  case 0xA2: m_green(ON); break; // goal R
+  case 0xA1: 
+    
+    break; // play
+  case 0xA2: break; // goal R
   case 0xA3: break; // goal B
   case 0xA4: break; // pause
   case 0xA5: break;
