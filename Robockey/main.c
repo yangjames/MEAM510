@@ -43,22 +43,22 @@ int main(void) {
     alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI),
     x_ddot_local, y_ddot_local;
 
-  float pos_d[2] = {0.0, 0.0};
+  float pos_d[2] = {-100.0, 0.0};
   float yaw_d = 0.0;
   float yaw_err = 0.0;
-  float Kp_yaw = 8.0;
+  float Kp_yaw = 20.0;
+  float l_duty = 0.0;
+  float r_duty = 0.0;
+  char motor_disable = 0;
 
   /* sensor fusion variables */
   float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
   float alpha_y = 0.999, alpha_ydot = 0.999, alpha_yddot = 0.999;
 
   /* start motors */
-  set_direction(MOTOR_L, FORWARD);
-  set_duty_cycle(MOTOR_L, 1.0);
-  set_direction(MOTOR_R, FORWARD);
-  set_duty_cycle(MOTOR_R, 1.0);
-  //enable_motors();
+  enable_motors();
 
+  //while(1);
   /* main loop */
   while(1) {
     /* check if we got a new packet */
@@ -146,9 +146,9 @@ int main(void) {
       y_dot_prev = y_dot;
       y_prev = y;
 
-
       /* update */
       if (update) {
+	m_red(ON);
 	/* x = x_const*alpha_x + x*(1-alpha_x); */
 	/* y = y_const*alpha_y + y*(1-alpha_y); */
 	/* x_dot = x_const_dot*alpha_xdot + x_dot*(1-alpha_xdot); */
@@ -172,34 +172,44 @@ int main(void) {
 	yaw_err = yaw_d - yaw;
 	yaw_err = yaw_err > PI ? yaw_err - 2*PI : (yaw_err < -PI ? yaw_err+2*PI : yaw_err);
 
-	if (yaw_err < -PI/4) {
+	if (yaw_err < -PI/4 && !motor_disable) {
 	  set_direction(MOTOR_L, FORWARD);
 	  set_direction(MOTOR_R, BACKWARD);
 	  set_duty_cycle(MOTOR_L, 1.0);
 	  set_duty_cycle(MOTOR_R, 1.0);
 	}
-	else if (yaw_err > PI/4) {
+	else if (yaw_err > PI/4 && !motor_disable) {
 	  set_direction(MOTOR_L, BACKWARD);
 	  set_direction(MOTOR_R, FORWARD);
 	  set_duty_cycle(MOTOR_L, 1.0);
 	  set_duty_cycle(MOTOR_R, 1.0);
 	}
-	else if (yaw_err < 0.0) {
+	else if (yaw_err < 0.0 && !motor_disable) {
 	  set_direction(MOTOR_L, FORWARD);
 	  set_direction(MOTOR_R, FORWARD);
-	  //set_duty_cycle(MOTOR_L, 1.0);
-	  //set_duty_cycle(MOTOR_R, 1.0-abs(yaw_err)/(2*PI)*Kp_yaw);
-	  disable_motors();
+	  set_duty_cycle(MOTOR_L, 1.0);
+	  r_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
+	  if (r_duty > 1.0)
+	    r_duty = 1.0;
+	  set_duty_cycle(MOTOR_R, 1.0-r_duty);
 	}
-	else if (yaw_err > 0.0) {
+	else if (yaw_err > 0.0 && !motor_disable) {
 	  set_direction(MOTOR_L, FORWARD);
 	  set_direction(MOTOR_L, FORWARD);
-	  //set_duty_cycle(MOTOR_L, 1.0-abs(yaw_err)/(2*PI)*Kp_yaw);
-	  //set_duty_cycle(MOTOR_R, 1.0);
+	  l_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
+	  if (l_duty > 1.0)
+	    l_duty = 1.0;
+	  set_duty_cycle(MOTOR_L, 1.0-l_duty);
+	  set_duty_cycle(MOTOR_R, 1.0);
+	}
+	if (fabs(pos_d[0] - x) < 5.0 && fabs(pos_d[1] - y) < 5.0) {
+	  motor_disable = 1;
+	  m_green(OFF);
+	  set_duty_cycle(MOTOR_L, 0.0);
+	  set_duty_cycle(MOTOR_R, 0.0);
 	  disable_motors();
 	}
-	if (pos_d[0] - x < 5.0 && pos_d[1] - y < 5.0)
-	  disable_motors();
+
 	/* m_usb_tx_string("dx:\t"); */
 	/* m_usb_tx_int((int)(pos_d[0]-x)); */
 	/* m_usb_tx_string("\tdy:\t"); */
@@ -210,10 +220,12 @@ int main(void) {
 	/* m_usb_tx_int((int)(yaw*180/PI)); */
 	/* m_usb_tx_string("\tyaw error:\t"); */
 	/* m_usb_tx_int((int)(yaw_err*180/PI)); */
-	/* m_usb_tx_string("\n"); */
+	//m_usb_tx_string("\n");
+      }
+      else {
+	m_red(OFF);
       }
     }
-
     /* reset constellation update flag */
     update = 0;
   }
