@@ -58,16 +58,25 @@ int main(void) {
   float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
   float alpha_y = 0.999, alpha_ydot = 0.999, alpha_yddot = 0.999;
 
+  /* adc variables */
+  int adc_mux_idx[12] = {0,1,4,5,6,7,32,33,34,35,36,37};
+  int adc_val[12];
+
   /* start motors */
   enable_motors();
+  int i;
+  while(1) {
+    for (i = 0; i < 12; i++) {
+      ADMUX = (1 << REFS0) + adc_mux_idx[i];
+      ADCSRA |= (1 << ADSC);
+      while (ADCSRA & (1 << ADSC));
+      adc_val[i] = ADCW;
+      m_usb_tx_int(adc_val[i]);
+      m_usb_tx_string(" ");
+    }
+    m_usb_tx_string("\n\r");
+  }
 
-  /* while(1) { */
-  /*   if (radio_flag) { */
-  /*     radio_flag = 0; */
-  /*     m_rf_read(radio_buf, PACKET_LENGTH);  */
-  /*     parse_radio_data(); */
-  /*   } */
-  /* } */
   /* main loop */
   while(1) {
     /* check if we got a new packet */
@@ -282,6 +291,10 @@ void init() {
   init_motor_drivers();
   init_solenoid();
   m_green(ON);
+
+  /* initialize ADC */
+  ADMUX |= (1 << REFS0); // set reference voltage to VCC 5V
+  ADCSRA |= (1 << ADEN) | (1 << ADPS1) | (1 << ADPS0); // enable ADC, divide by 8
 
   /* intialize system timer */
   TCCR3A = 0x00; // normal compare output mode operation
