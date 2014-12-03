@@ -125,104 +125,104 @@ int main(void) {
       if (yaw <= -PI)
 	yaw += 2*PI;
       prev_yaw_dot = imu[5]*GYRO_SCALE;
-      
-      /* update */
-      if (update) {
-	m_red(ON);
-	x = x_const;
-	y = y_const;
-	x_dot = x_const_dot;
-	y_dot = y_const_dot;
-	x_ddot = x_const_ddot;
-	y_ddot = y_const_ddot;
-	if (yaw_const*180/PI < 178 && yaw_const*180/PI > -178)
-	  yaw = yaw_const*0.01 + yaw*0.99;
-	else
-	  yaw = yaw_const;
+    }
 
-	/* state machine */
-	switch (state) {
-	case INITIALIZE:
-	  if (x > 0 && team == N_INIT) {
-	    team = RED;
-	    pos_d[0] = -100.0;
-	    pos_d[1] = 0.0;
-	  }
-	  if (x < 0 && team == N_INIT) {
-	    team = BLUE;
-	    pos_d[0] = 100.0;
-	    pos_d[1] = 0.0;
-	  }
-	  if (team != N_INIT && go_flag) state = GO;
-	  break;
-	case GO: {
-	  /* controls */
-	  yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
-	  yaw_err = yaw_d - yaw;
-	  yaw_err = yaw_err > PI ? yaw_err - 2*PI : (yaw_err < -PI ? yaw_err+2*PI : yaw_err);
+    /* update */
+    if (update) {
+      m_red(ON);
+      x = x_const;
+      y = y_const;
+      x_dot = x_const_dot;
+      y_dot = y_const_dot;
+      x_ddot = x_const_ddot;
+      y_ddot = y_const_ddot;
+      if (yaw_const*180/PI < 178 && yaw_const*180/PI > -178)
+	yaw = yaw_const*0.01 + yaw*0.99;
+      else
+	yaw = yaw_const;
 
-	  if (yaw_err < -PI/4 && !motor_disable) {
-	    set_direction(MOTOR_L, FORWARD);
-	    set_direction(MOTOR_R, BACKWARD);
-	    set_duty_cycle(MOTOR_L, 1.0);
-	    set_duty_cycle(MOTOR_R, 1.0);
-	  }
-	  else if (yaw_err > PI/4 && !motor_disable) {
-	    set_direction(MOTOR_L, BACKWARD);
-	    set_direction(MOTOR_R, FORWARD);
-	    set_duty_cycle(MOTOR_L, 1.0);
-	    set_duty_cycle(MOTOR_R, 1.0);
-	  }
-	  else if (yaw_err < 0.0 && !motor_disable) {
-	    set_direction(MOTOR_L, FORWARD);
-	    set_direction(MOTOR_R, FORWARD);
-	    set_duty_cycle(MOTOR_L, 1.0);
-	    r_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
-	    if (r_duty > 1.0)
-	      r_duty = 1.0;
-	    set_duty_cycle(MOTOR_R, 1.0-r_duty);
-	  }
-	  else if (yaw_err > 0.0 && !motor_disable) {
-	    set_direction(MOTOR_L, FORWARD);
-	    set_direction(MOTOR_L, FORWARD);
-	    l_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
-	    if (l_duty > 1.0)
-	      l_duty = 1.0;
-	    set_duty_cycle(MOTOR_L, 1.0-l_duty);
-	    set_duty_cycle(MOTOR_R, 1.0);
-	  }
-	  if (fabs(pos_d[0] - x) < 5.0 && fabs(pos_d[1] - y) < 5.0) {
-	    state = STOP;
-	    motor_disable = 1;
-	    m_green(OFF);
-	    set_direction(MOTOR_L, BRAKE);
-	    set_direction(MOTOR_R, BRAKE);
-	    set_duty_cycle(MOTOR_L, 0.0);
-	    set_duty_cycle(MOTOR_R, 0.0);
-	    //disable_motors();
-	  }
-	  break;
+      /* state machine */
+      switch (state) {
+      case INITIALIZE:
+	if (x > 0 && team == N_INIT) {
+	  team = RED;
+	  pos_d[0] = -100.0;
+	  pos_d[1] = 0.0;
 	}
-	case STOP: {
+	if (x < 0 && team == N_INIT) {
+	  team = BLUE;
+	  pos_d[0] = 100.0;
+	  pos_d[1] = 0.0;
+	}
+	if (team != N_INIT && go_flag) state = GO;
+	break;
+      case GO: {
+	/* controls */
+	yaw_d = atan2(-pos_d[0]+x,pos_d[1]-y);
+	yaw_err = yaw_d - yaw;
+	yaw_err = yaw_err > PI ? yaw_err - 2*PI : (yaw_err < -PI ? yaw_err+2*PI : yaw_err);
+
+	if (yaw_err < -PI/4 && !motor_disable) {
+	  set_direction(MOTOR_L, FORWARD);
+	  set_direction(MOTOR_R, BACKWARD);
+	  set_duty_cycle(MOTOR_L, 1.0);
+	  set_duty_cycle(MOTOR_R, 1.0);
+	}
+	else if (yaw_err > PI/4 && !motor_disable) {
+	  set_direction(MOTOR_L, BACKWARD);
+	  set_direction(MOTOR_R, FORWARD);
+	  set_duty_cycle(MOTOR_L, 1.0);
+	  set_duty_cycle(MOTOR_R, 1.0);
+	}
+	else if (yaw_err < 0.0 && !motor_disable) {
+	  set_direction(MOTOR_L, FORWARD);
+	  set_direction(MOTOR_R, FORWARD);
+	  set_duty_cycle(MOTOR_L, 1.0);
+	  r_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
+	  if (r_duty > 1.0)
+	    r_duty = 1.0;
+	  set_duty_cycle(MOTOR_R, 1.0-r_duty);
+	}
+	else if (yaw_err > 0.0 && !motor_disable) {
+	  set_direction(MOTOR_L, FORWARD);
+	  set_direction(MOTOR_L, FORWARD);
+	  l_duty = fabs(yaw_err)/(2*PI)*Kp_yaw;
+	  if (l_duty > 1.0)
+	    l_duty = 1.0;
+	  set_duty_cycle(MOTOR_L, 1.0-l_duty);
+	  set_duty_cycle(MOTOR_R, 1.0);
+	}
+	if (fabs(pos_d[0] - x) < 5.0 && fabs(pos_d[1] - y) < 5.0) {
+	  state = STOP;
 	  motor_disable = 1;
 	  m_green(OFF);
 	  set_direction(MOTOR_L, BRAKE);
 	  set_direction(MOTOR_R, BRAKE);
 	  set_duty_cycle(MOTOR_L, 0.0);
 	  set_duty_cycle(MOTOR_R, 0.0);
-	  go_flag = 0;
-	  motor_disable = 0;
-	  team = N_INIT;
-	  state = INITIALIZE;
 	  //disable_motors();
 	}
-	default:
-	  break;
-	}
+	break;
       }
-      else {
-	m_red(OFF);
+      case STOP: {
+	motor_disable = 1;
+	m_green(OFF);
+	set_direction(MOTOR_L, BRAKE);
+	set_direction(MOTOR_R, BRAKE);
+	set_duty_cycle(MOTOR_L, 0.0);
+	set_duty_cycle(MOTOR_R, 0.0);
+	go_flag = 0;
+	motor_disable = 0;
+	team = N_INIT;
+	state = INITIALIZE;
+	//disable_motors();
       }
+      default:
+	break;
+      }
+    }
+    else {
+      m_red(OFF);
     }
     /* reset constellation update flag */
     update = 0;
