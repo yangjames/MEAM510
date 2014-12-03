@@ -126,45 +126,6 @@ int main(void) {
 	yaw += 2*PI;
       prev_yaw_dot = imu[5]*GYRO_SCALE;
       
-      /* calculate pitch */
-      pitch_dot = pitch_dot*alpha_hp + (imu[4]*GYRO_SCALE - prev_pitch_dot)*alpha_hp;
-      pitch += dt*pitch_dot;
-      if (pitch > PI)
-	pitch -= 2*PI;
-      if (pitch <= -PI)
-	pitch += 2*PI;
-      prev_pitch_dot = imu[4]*GYRO_SCALE;
-      if (fabs(imu[0]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) > -2*g && fabs(imu[0]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) < 2*g)
-	pitch = pitch*0.99 - atan2f(imu[0]*ACC_SCALE,imu[2]*ACC_SCALE)*0.01;
-      
-      /* calculate roll */
-      roll_dot = roll_dot*alpha_hp + (-imu[3]*GYRO_SCALE - prev_roll_dot)*alpha_hp;
-      roll += dt*roll_dot;
-      if (roll > PI)
-	roll -= 2*PI;
-      if (roll <= -PI)
-	roll += 2*PI;
-      prev_roll_dot = -imu[3]*GYRO_SCALE;
-      if (fabs(imu[1]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) > -2*g && fabs(imu[1]*GYRO_SCALE) + fabs(imu[2]*ACC_SCALE) < 2*g)
-	roll = roll*0.99 - atan2f(imu[1]*ACC_SCALE,imu[2]*ACC_SCALE)*0.01;
-
-      /* calculate local position */
-      x_ddot = x_ddot*alpha_hp_acc + (100*(-ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw)) - x_ddot_prev)*alpha_hp_acc;
-      x_dot = x_ddot*dt + x_dot_prev;
-      x = 1/2*dt*dt*x_ddot_prev + x_dot_prev*dt +x_prev;
-
-      x_ddot_prev = 100*(-ACC_SCALE*imu[0]*sin(yaw) - ACC_SCALE*imu[1]*cos(yaw));
-      x_dot_prev = x_dot;
-      x_prev = x;
-
-      y_ddot = y_ddot*alpha_hp_acc + (100*(ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw)) - y_ddot_prev)*alpha_hp_acc;
-      y_dot = y_ddot*dt + y_dot_prev;
-      y = 1/2*dt*dt*y_ddot_prev + y_dot_prev*dt + y_prev;
-
-      y_ddot_prev = 100*(ACC_SCALE*imu[0]*cos(yaw) - ACC_SCALE*imu[1]*sin(yaw));
-      y_dot_prev = y_dot;
-      y_prev = y;
-
       /* update */
       if (update) {
 	m_red(ON);
