@@ -21,8 +21,6 @@ float pos_d[2] = {0.0, 0.0};
 
 /* main function */
 int main(void) {
-  /* system initialize */
-  init();
 
   /* localization variables */
   uint16_t constellation[12];
@@ -40,8 +38,6 @@ int main(void) {
   float x_ddot = 0.0, x_ddot_prev = 0.0, x_dot = 0.0, x_dot_prev = 0.0, x = 0.0, x_prev = 0.0, // x variables
     y_ddot = 0.0, y_ddot_prev = 0.0, y_dot = 0.0, y_dot_prev = 0.0, y = 0.0, y_prev = 0.0, // y variables
     yaw = 0.0, yaw_dot = 0.0, prev_yaw_dot = 0.0, // yaw variables
-    pitch = 0.0, pitch_dot = 0.0, prev_pitch_dot = 0.0, // pitch variables
-    roll = 0.0, roll_dot = 0.0, prev_roll_dot = 0.0, // roll variables
     alpha_lp, cutoff_low = 3.0, RC_low = 1/(cutoff_low*2*PI), // low-pass filter variables
     alpha_hp_acc, cutoff_high_acc = 0.00001, RC_high_acc = 1/(cutoff_high_acc*2*PI),
     alpha_hp, cutoff_high = 0.001, RC_high = 1/(cutoff_high*2*PI),
@@ -54,28 +50,13 @@ int main(void) {
   float l_duty = 0.0;
   float r_duty = 0.0;
 
-  /* sensor fusion variables */
-  float alpha_x = 0.999, alpha_xdot = 0.999, alpha_xddot = 0.999;
-  float alpha_y = 0.999, alpha_ydot = 0.999, alpha_yddot = 0.999;
-
   /* adc variables */
-  int adc_mux_idx[12] = {0,1,4,5,6,7,32,33,34,35,36,37};
-  int adc_val[12];
+  uint8_t adc_mux_idx[10] = {0,1,7,32,4,5,6,35,36,33};
+  int adc_val[10];
 
-  /* start motors */
+  /* system initialize */
+  init();
   enable_motors();
-  int i;
-  while(1) {
-    for (i = 0; i < 12; i++) {
-      ADMUX = (1 << REFS0) + adc_mux_idx[i];
-      ADCSRA |= (1 << ADSC);
-      while (ADCSRA & (1 << ADSC));
-      adc_val[i] = ADCW;
-      m_usb_tx_int(adc_val[i]);
-      m_usb_tx_string(" ");
-    }
-    m_usb_tx_string("\n\r");
-  }
 
   /* main loop */
   while(1) {
@@ -144,6 +125,9 @@ int main(void) {
     else {
       m_red(OFF);
     }
+
+    /* read adc values */
+    read_adc(adc_val, adc_mux_idx);
 
     /* state machine */
     switch (state) {
@@ -242,6 +226,7 @@ void init() {
   CLKPR = 0x00;
 
   /* initialize fiene code */
+  m_disableJTAG();
   m_usb_init();
   m_bus_init();
   while(!m_wii_open());
@@ -256,7 +241,9 @@ void init() {
 
   /* initialize ADC */
   ADMUX |= (1 << REFS0); // set reference voltage to VCC 5V
-  ADCSRA |= (1 << ADEN) | (1 << ADPS1) | (1 << ADPS0); // enable ADC, divide by 8
+  ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // prescale by 128
+  DIDR0 |= 0xF3; // disable digital input
+  DIDR2 |= 0x1B; // disable digital input
 
   /* intialize system timer */
   TCCR3A = 0x00; // normal compare output mode operation
@@ -265,6 +252,19 @@ void init() {
   TCCR3B = 0x01; // enable timer
 
   sei();
+}
+
+void read_adc(int* adc_val, uint8_t* adc_mux_idx) {
+  int i;
+  for (i = 0; i < 10; i++) {
+    ADCSRA &= ~(1 << ADEN);
+    ADMUX = (1 << REFS0) | ((adc_mux_idx[i]) & ((1 << MUX0) | (1 << MUX1) | (1 << MUX2)));
+    ADCSRB = ((adc_mux_idx[i]) & (1 << MUX5));
+    ADCSRA |= (1 << ADEN);
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+    adc_val[i] = ADCW;
+  }
 }
 
 void parse_radio_data() {
