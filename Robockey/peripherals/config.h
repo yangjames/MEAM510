@@ -13,10 +13,10 @@
 #define MOTOR_PORT PORTB
 #define L_EN 6
 #define R_EN 7
-#define L_DIR_1 0
-#define L_DIR_2 1
-#define R_DIR_1 2
-#define R_DIR_2 3
+#define L_DIR_1 1
+#define L_DIR_2 0
+#define R_DIR_1 3
+#define R_DIR_2 2
 
 enum {
   MOTOR_L = 1,
