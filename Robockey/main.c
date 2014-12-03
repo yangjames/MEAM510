@@ -8,6 +8,10 @@
 /* predeclarations */
 void init();
 void parse_radio_data();
+void read_adc(int* adc_val, uint8_t* adc_mux_idx);
+void estimate_puck_location(int* adc_val, 
+			    float* angle, float* distance, 
+			    float* sensor_angles);
 
 /* global variables */
 uint8_t radio_buf[PACKET_LENGTH];
@@ -53,11 +57,25 @@ int main(void) {
   /* adc variables */
   uint8_t adc_mux_idx[10] = {0,1,7,32,4,5,6,35,36,33};
   int adc_val[10];
+  float sensor_angles[10] = {PI/5, PI/4, PI/2, 3*PI/4, PI, -3*PI/4, -PI/2, -PI/4, -PI/5, 0};
 
   /* system initialize */
   init();
   enable_motors();
 
+  float puck_angle, puck_distance;
+  int i;
+  while(1) {
+    read_adc(adc_val, adc_mux_idx);
+    estimate_puck_location(adc_val,&puck_angle, &puck_distance, sensor_angles);
+    for (i = 0; i < 10; i++) {
+      m_usb_tx_int(adc_val[i]);
+      m_usb_tx_string(" ");
+    }
+    //m_usb_tx_string("\n");
+    m_usb_tx_int((int)(puck_angle*180/PI));
+    m_usb_tx_string("\n");
+  }
   /* main loop */
   while(1) {
     /* check if we got a new packet */
@@ -110,7 +128,7 @@ int main(void) {
 
     /* update */
     if (update) {
-      m_red(ON);
+      //m_red(ON);
       x = x_const;
       y = y_const;
       x_dot = x_const_dot;
@@ -123,11 +141,15 @@ int main(void) {
 	yaw = yaw_const;
     }
     else {
-      m_red(OFF);
+      //m_red(OFF);
     }
 
     /* read adc values */
     read_adc(adc_val, adc_mux_idx);
+    
+    /* check if we have the puck or not */
+    if (PINE & (1 << 6)) {
+    }
 
     /* state machine */
     switch (state) {
@@ -232,7 +254,6 @@ void init() {
   while(!m_wii_open());
   while(!m_imu_init(0,0));
   while(!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
-  m_red(ON);
 
   /* initialize drivers */
   init_motor_drivers();
@@ -251,7 +272,34 @@ void init() {
   TIMSK3 = 0x01; // enable overflow interrupt
   TCCR3B = 0x01; // enable timer
 
+  /* breakbeam sensor */
+  DDRE &= ~(1 << 6);
+
   sei();
+}
+
+void estimate_puck_location(int* adc_val, float* angle, float* distance, float* sensor_angles) {
+  int biggest_idx = 0, second_biggest_idx = 0, i,
+    biggest_val = adc_val[0], second_biggest_val = adc_val[0];
+  for (i = 1; i < 10; i++) {
+    if (adc_val[i] > biggest_val) {
+      biggest_idx = i;
+      biggest_val = adc_val[i];
+    }
+    if (adc_val[i] > second_biggest_val && adc_val[i] < biggest_val) {
+      second_biggest_idx = i;
+      second_biggest_val = adc_val[i];
+    }
+  }
+  
+  if (biggest_val > 400) {
+    *angle = (sensor_angles[second_biggest_idx]*second_biggest_val + sensor_angles[biggest_idx]*biggest_val)/(second_biggest_val+biggest_val);
+    *distance = 0;
+    if (*angle > PI)
+      *angle -= 2*PI;
+    if (*angle < -PI)
+      *angle += 2*PI;
+  }
 }
 
 void read_adc(int* adc_val, uint8_t* adc_mux_idx) {
